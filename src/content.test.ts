@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { QURAN_SOURCE, QURAN_SURAH_SLOTS, isPresentable, searchVerifiedContent, validateQuranItems, type QuranAyah, type ReligiousContentItem } from './content'
 import { validateImportedQuran } from './quranValidation'
 
-const source = { ...QURAN_SOURCE, verificationStatus: 'verified' as const, reviewerStatus: 'not_reviewed' as const }
+const source = { ...QURAN_SOURCE, verificationStatus: 'verified' as const, reviewStatus: 'not_reviewed' as const }
 const item = (surah: number, ayah: number): QuranAyah => ({ id: `quran:${surah}:${ayah}`, type: 'quran_ayah', surah, ayah, arabic: `TEST-${surah}-${ayah}`, source })
 
 function syntheticStructure() {
@@ -17,9 +17,9 @@ function syntheticStructure() {
 }
 
 describe('Phase-2 content foundation', () => {
-  it('defines exactly 114 Quran structural slots without religious source text', () => {
+  it('defines all 114 Quran structural slots as available after source integration', () => {
     expect(QURAN_SURAH_SLOTS).toHaveLength(114)
-    expect(QURAN_SURAH_SLOTS.every(slot => slot.available === false)).toBe(true)
+    expect(QURAN_SURAH_SLOTS.every(slot => slot.available === true)).toBe(true)
   })
 
   it('validates a complete 114-surah structural dataset without trusting text content', () => {
