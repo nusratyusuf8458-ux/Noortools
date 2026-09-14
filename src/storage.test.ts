@@ -32,7 +32,7 @@ describe('local storage', () => {
   })
 
   it('migrates v1 and v2 into v3 without inventing session history', () => {
-    localStorage.setItem('noortools:v1', JSON.stringify({ version: 1, location: null, salah: {}, tasbih: { count: 2, target: 33, dhikr: 'SubhanAllah', sessions: 4, total: 9 } }))
+    localStorage.setItem('noortools:v1', JSON.stringify({ version: 1, location: null, salah: {}, tasbih: { count: 2, target: 33, dhikr: 'SubhanAllah', sessions: 3, total: 9 } }))
     const migratedV1 = loadState()
     expect(migratedV1.version).toBe(3)
     expect(migratedV1.tasbih.count).toBe(2)
@@ -80,6 +80,16 @@ describe('local storage', () => {
     const instant = new Date('2026-09-14T23:30:00Z')
     expect(localDateKey(instant, 'Asia/Kolkata')).toBe('2026-09-15')
     expect(localDateKey(instant, 'America/New_York')).toBe('2026-09-14')
+  })
+
+  it('uses selected timezone for activity windows and streaks', () => {
+    const instant = new Date('2026-09-14T23:30:00Z')
+    const salah = { '2026-09-14': { Fajr: true, Dhuhr: true, Asr: true, Maghrib: true, Isha: true }, '2026-09-15': { Fajr: true, Dhuhr: true, Asr: true, Maghrib: true, Isha: true } }
+    expect(salahStats(salah, instant, 'Asia/Kolkata').todayCompleted).toBe(5)
+    expect(salahStats(salah, instant, 'Asia/Kolkata').streak).toBe(1)
+    const sessions = [{ date: '2026-09-14', count: 10, target: 33, dhikr: 'SubhanAllah' }, { date: '2026-09-15', count: 20, target: 33, dhikr: 'SubhanAllah' }]
+    expect(tasbihStats(sessions, instant, 'Asia/Kolkata').today).toBe(20)
+    expect(tasbihStats(sessions, instant, 'Asia/Kolkata').streak).toBe(1)
   })
 
   it('calculates real Salah and Tasbih streaks and windows', () => {
