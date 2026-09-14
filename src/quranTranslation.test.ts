@@ -3,8 +3,9 @@ import { searchQuranTranslations, toggleTranslationBookmark } from './quranTrans
 
 const synthetic = (id: string, surah: number, ayah: number, text: string) => ({
   id, surah, ayah, language: 'en', translator: 'Marmaduke William Pickthall', edition: 'The Meaning of the Glorious Koran (1930)', text,
+  contentHash: 'b'.repeat(64),
   source: {
-    id: 'quran-translation.pickthall.1930', name: 'The Meaning of the Glorious Koran', version: '1930 edition', sourceURL: 'https://www.gutenberg.org/ebooks/16955.txt.utf-8',
+    id: 'quran-translation.pickthall.1930.gutenberg', name: 'The Meaning of the Glorious Koran', version: '1930 edition', sourceURL: 'https://www.gutenberg.org/ebooks/16955.txt.utf-8',
     license: 'Public domain work', licenseURL: 'https://www.gutenberg.org/ebooks/16955', copyrightHolder: 'Marmaduke William Pickthall', attribution: 'Translator: Marmaduke William Pickthall',
     redistributionStatus: 'cleared' as const, modificationStatus: 'permitted' as const, commercialUseStatus: 'permitted' as const, contentHash: 'a'.repeat(64), verificationStatus: 'verified' as const, reviewStatus: 'pending_scholar_review' as const,
   }, reviewState: 'pending_scholar_review' as const,
@@ -17,6 +18,7 @@ describe('Quran translations', () => {
     expect(item.translator).toBe('Marmaduke William Pickthall')
     expect(item.source.redistributionStatus).toBe('cleared')
     expect(item.source.contentHash).toHaveLength(64)
+    expect(item.contentHash).toHaveLength(64)
     expect(item.reviewState).toBe('pending_scholar_review')
   })
 
