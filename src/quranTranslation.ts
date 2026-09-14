@@ -8,6 +8,7 @@ export type QuranTranslation = {
   translator: string
   edition: string
   text: string
+  contentHash: string
   source: Phase23Source & { contentHash: string }
   reviewState: 'source_verified' | 'pending_scholar_review' | 'scholar_reviewed' | 'needs_correction' | 'unavailable'
 }
@@ -34,7 +35,7 @@ function validate(root: unknown): QuranTranslationDataset {
     ids.add(item.id)
     if (item.language !== 'en' || item.translator !== 'Marmaduke William Pickthall' || item.edition !== 'The Meaning of the Glorious Koran (1930)') throw new Error(`Unexpected Pickthall metadata for ${item.id}.`)
     const sourceOk = item.source?.id === 'quran-translation.pickthall.1930.gutenberg' || item.source?.id === 'quran-translation.pickthall.1930.internet-archive'
-    if (!item.text.trim() || !isObject(item.source) || !sourceOk || item.source.redistributionStatus !== 'cleared' || item.source.verificationStatus !== 'verified' || !/^[a-f0-9]{64}$/.test(item.source.contentHash)) throw new Error(`Translation rights metadata failed for ${item.id}.`)
+    if (!item.text.trim() || !/^[a-f0-9]{64}$/.test(item.contentHash) || !isObject(item.source) || !sourceOk || item.source.redistributionStatus !== 'cleared' || item.source.verificationStatus !== 'verified' || !/^[a-f0-9]{64}$/.test(item.source.contentHash)) throw new Error(`Translation rights/hash metadata failed for ${item.id}.`)
     if (item.reviewState !== 'pending_scholar_review' && item.reviewState !== 'scholar_reviewed') throw new Error(`Translation review state failed for ${item.id}.`)
   }
   return { schema: 'noortools.quran-translations', version: 1, translations: items }
