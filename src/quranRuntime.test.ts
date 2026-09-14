@@ -6,6 +6,7 @@ import { loadQuran } from './quranRuntime'
 
 const rawPath = 'public/content/quran-uthmani-v1.1.txt'
 const jsonPath = 'public/content/quran-uthmani-v1.1.json'
+const metadataPath = 'public/content/quran-metadata.json'
 
 describe('integrated Quran dataset', () => {
   it('contains the source-derived 114-surah / 6236-ayah structure', () => {
@@ -34,14 +35,22 @@ describe('integrated Quran dataset', () => {
     expect(dataset.source.verificationStatus).toBe('verified')
     expect(dataset.source.reviewStatus).toBe('not_reviewed')
     expect(dataset.source.contentHash).toBe(hash)
+    const metadata = JSON.parse(readFileSync(metadataPath, 'utf8')) as { surahs: unknown[]; juz: unknown[]; pages: unknown[] }
+    expect(metadata.surahs).toHaveLength(114)
+    expect(metadata.juz).toHaveLength(30)
+    expect(metadata.pages).toHaveLength(604)
   })
 
-  it('loads only the source-gated verified dataset', async () => {
+  it('loads only the source-gated verified dataset and metadata', async () => {
     const dataset = JSON.parse(readFileSync(jsonPath, 'utf8'))
-    vi.stubGlobal('fetch', async () => new Response(JSON.stringify(dataset), { status: 200, headers: { 'content-type': 'application/json' } }))
+    const metadata = JSON.parse(readFileSync(metadataPath, 'utf8'))
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).includes('quran-metadata') ? metadata : dataset), { status: 200, headers: { 'content-type': 'application/json' } }))
     const loaded = await loadQuran()
     expect(loaded.source.sourceId).toBe('tanzil-uthmani')
     expect(loaded.ayahs.length).toBe(6236)
+    expect(loaded.surahs.length).toBe(114)
+    expect(loaded.juz.length).toBe(30)
+    expect(loaded.pages.length).toBe(604)
     vi.unstubAllGlobals()
   })
 })
