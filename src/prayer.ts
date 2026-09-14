@@ -12,38 +12,35 @@ function dayOfYear(date: Date) {
   return Math.floor((current.getTime() - start.getTime()) / 86400000) + 1
 }
 
-function solarPosition(date: Date, lat: number, lon: number) {
+function solarPosition(date: Date, lon: number) {
   const n = dayOfYear(date)
   const gamma = 2 * Math.PI / 365 * (n - 1)
-  const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma))
+  const equationOfTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma))
   const declination = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma)
-  const solarNoonUtcMinutes = 720 - 4 * lon - eqTime
+  const solarNoonUtcMinutes = 720 - 4 * lon - equationOfTime
   return { declination, solarNoonUtcMinutes }
 }
 
-function localDateFromUtcMinutes(date: Date, utcMinutes: number) {
-  const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) + utcMinutes * 60000)
-  const midnight = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const offsetCorrection = (midnight.getTimezoneOffset() - utc.getTimezoneOffset()) * 60000
-  return new Date(utc.getTime() - midnight.getTimezoneOffset() * 60000 + offsetCorrection)
+function fromUtcMinutes(date: Date, utcMinutes: number) {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) + utcMinutes * 60000)
 }
 
 function solarTime(date: Date, lat: number, lon: number, altitudeDegrees: number, morning: boolean) {
-  const { declination, solarNoonUtcMinutes } = solarPosition(date, lat, lon)
+  const { declination, solarNoonUtcMinutes } = solarPosition(date, lon)
   const altitude = rad(altitudeDegrees)
   const cosHourAngle = (Math.sin(altitude) - Math.sin(rad(lat)) * Math.sin(declination)) / (Math.cos(rad(lat)) * Math.cos(declination))
   if (cosHourAngle > 1 || cosHourAngle < -1) return null
   const hourAngle = deg(Math.acos(cosHourAngle))
   const utcMinutes = solarNoonUtcMinutes + (morning ? -4 * hourAngle : 4 * hourAngle)
-  return localDateFromUtcMinutes(date, utcMinutes)
+  return fromUtcMinutes(date, utcMinutes)
 }
 
-function solarNoon(date: Date, lat: number, lon: number) {
-  return localDateFromUtcMinutes(date, solarPosition(date, lat, lon).solarNoonUtcMinutes)
+function solarNoon(date: Date, lon: number) {
+  return fromUtcMinutes(date, solarPosition(date, lon).solarNoonUtcMinutes)
 }
 
 function asr(date: Date, lat: number, lon: number, shadowRatio: number) {
-  const declination = solarPosition(date, lat, lon).declination
+  const declination = solarPosition(date, lon).declination
   const altitude = deg(Math.atan(1 / (shadowRatio + Math.tan(Math.abs(rad(lat) - declination)))))
   return solarTime(date, lat, lon, altitude, false)
 }
@@ -53,7 +50,7 @@ export function calculatePrayerTimes(date: Date, lat: number, lon: number, metho
   const events: [PrayerName, Date | null][] = [
     ['Fajr', solarTime(date, lat, lon, -angles.fajr, true)],
     ['Sunrise', solarTime(date, lat, lon, -0.833, true)],
-    ['Dhuhr', solarNoon(date, lat, lon)],
+    ['Dhuhr', solarNoon(date, lon)],
     ['Asr', asr(date, lat, lon, hanafi ? 2 : 1)],
     ['Maghrib', solarTime(date, lat, lon, -0.833, false)],
     ['Isha', solarTime(date, lat, lon, -angles.isha, false)],
@@ -66,9 +63,8 @@ export function nextPrayer(prayers: Prayer[], lat: number, lon: number, now = ne
   if (upcoming) return upcoming
   const tomorrow = new Date(now)
   tomorrow.setDate(now.getDate() + 1)
-  tomorrow.setHours(0, 0, 0, 0)
-  const tomorrowPrayers = calculatePrayerTimes(tomorrow, lat, lon)
-  return tomorrowPrayers.find(p => p.name === 'Fajr') ?? null
+  tomorrow.setHours(12, 0, 0, 0)
+  return calculatePrayerTimes(tomorrow, lat, lon).find(p => p.name === 'Fajr') ?? null
 }
 
 export function currentPrayer(prayers: Prayer[], now = new Date()): PrayerName | null {
