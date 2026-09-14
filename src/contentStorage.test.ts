@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { azkarHistoryDates, bookmarkCount, isAzkarCompleted, loadContentState, quranActivityDays, quranReadCount, recordAzkarCount, recordQuranProgress, resetAzkarDay, resetContentState, saveContentState, saveNote, setItemProgress, setReminderPreferences, toggleBookmark } from './contentStorage'
+import { azkarHistoryDates, bookmarkCount, isAzkarCompleted, loadContentState, quranActivityDays, quranReadCount, recordAzkarCount, recordQuranProgress, resetAzkarDay, resetContentState, saveContentState, saveNote, setReminderPreferences, setItemProgress, toggleBookmark, toggleFavorite } from './contentStorage'
 
 beforeEach(() => localStorage.clear())
 
@@ -22,7 +22,9 @@ describe('Phase-2.4 local content state', () => {
     const state = loadContentState()
     const saved = toggleBookmark(state, 'allah-name:1', 'allah_name', new Date('2026-09-14T00:00:00Z'))
     saveContentState(saved)
-    expect(loadContentState().bookmarks['allah-name:1']).toEqual({ id: 'allah-name:1', type: 'allah_name', addedAt: '2026-09-14T00:00:00.000Z' })
+    expect(loadContentState().bookmarks['allah-name:1']).toEqual({ id: 'allah-name:1', type: 'allah_name', addedAt: '2026-09-14T00:00:00.000Z', favorite: false })
+    expect(toggleFavorite(saved, 'allah-name:1').bookmarks['allah-name:1'].favorite).toBe(true)
+    expect(toggleFavorite(toggleFavorite(saved, 'allah-name:1'), 'new-id', 'dua').bookmarks['new-id'].favorite).toBe(true)
     expect(bookmarkCount(toggleBookmark(saved, 'allah-name:1', 'allah_name'))).toBe(0)
   })
 
@@ -83,7 +85,7 @@ describe('Phase-2.4 local content state', () => {
     localStorage.setItem('noortools:content:v2', JSON.stringify({ version: 2, bookmarks: { bad: { type: 'made-up', addedAt: 3 }, good: { type: 'dua', addedAt: '2026-09-13T00:00:00.000Z' } }, quran: { positions: { 'quran:2': { ayah: 255, updatedAt: '2026-09-13T00:00:00.000Z' } }, lastReadId: 'quran:2' }, itemProgress: { x: { completed: 9, target: 1 } }, azkarDaily: {} }))
     const state = loadContentState()
     expect(state.version).toBe(3)
-    expect(Object.keys(state.bookmarks)).toEqual(['good'])
+    expect(state.bookmarks.good).toMatchObject({ id: 'good', type: 'dua', favorite: false })
     expect(state.quran.positions['quran:2']).toEqual({ ayah: 255, updatedAt: '2026-09-13T00:00:00.000Z' })
     expect(state.quran.readAyahs).toEqual({})
     expect(state.quran.history).toEqual([])
