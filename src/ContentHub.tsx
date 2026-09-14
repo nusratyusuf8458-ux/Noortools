@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loadContentState, azkarHistoryDates, isAzkarCompleted, recordAzkarCount, recordQuranProgress, saveContentState, toggleBookmark, resetAzkarDay, type ContentUserState } from './contentStorage'
+import { loadContentState, azkarHistoryDates, isAzkarCompleted, recordAzkarCount, recordQuranProgress, resetAzkarDay, saveContentState, toggleBookmark, type ContentUserState } from './contentStorage'
 import { loadQuran, type QuranRuntime } from './quranRuntime'
-import { loadVerifiedContent, type AllahName, type Dua, type Azkar, type VerifiedContentRuntime } from './verifiedContentRuntime'
+import { loadVerifiedContent, type AllahName, type VerifiedContentRuntime } from './verifiedContentRuntime'
 import type { ReligiousContentItem, SourceMetadata } from './content'
 import { buildReviewPackage } from './reviewPackage'
 
@@ -36,6 +36,11 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
   const filteredAyahs = useMemo(() => quran && selectedSurah ? quran.ayahs.filter(item => item.surah === selectedSurah && (!query.trim() || item.arabic.includes(query.trim()))) : [], [quran, selectedSurah, query])
   const duaCategories = useMemo(() => ['All', ...Array.from(new Set(duas.map(item => item.category)))], [duas])
   const filteredDuas = duaCategory === 'All' ? duas : duas.filter(item => item.category === duaCategory)
+  const dailyName = useMemo(() => {
+    if (names.length === 0) return null
+    const today = new Date(); const start = new Date(today.getFullYear(), 0, 0); const day = Math.floor((today.getTime() - start.getTime()) / 86400000)
+    return names[(day - 1) % names.length]
+  }, [names])
 
   const globalResults = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase()
@@ -70,8 +75,7 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
     for (const item of duas) items.push({ id: item.id, type: item.type, title: item.title, arabic: item.arabic, transliteration: item.transliteration, translation: item.translation, source: sourceForReview(item.source) })
     for (const item of azkar) items.push({ id: item.id, type: item.type, title: item.title, arabic: item.arabic, transliteration: item.transliteration, translation: item.translation, source: sourceForReview(item.source) })
     const blob = new Blob([JSON.stringify(buildReviewPackage(items), null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a'); link.href = url; link.download = 'noortools-phase-2.2-review-package.json'; link.click(); URL.revokeObjectURL(url)
+    const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'noortools-phase-2.2-review-package.json'; link.click(); URL.revokeObjectURL(url)
     setMessage('Review package exported. No scholar review is claimed.')
   }
 
@@ -88,7 +92,7 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
 
     {section === 'quran' && quran && <div className="card"><p className="eyebrow">QURAN · TANZIL UTHMANI v1.1</p><h2>{currentSurah ? currentSurah.nameTransliteration || `Surah ${selectedSurah}` : 'Surah browser'}</h2>{selectedSurah === null ? <div className="quran-slot-list">{quran.surahs.map(item => <button key={item.number} className="quran-slot" onClick={() => { setSelectedSurah(item.number); setQuery('') }}><span>{String(item.number).padStart(3, '0')}</span><b>{item.nameTransliteration || `Surah ${item.number}`}</b><small>{item.ayahCount} ayahs</small></button>)}</div> : <><div className="card-head"><p className="muted">{currentSurah?.nameEnglish || ''}</p><button onClick={() => setSelectedSurah(null)}>All Surahs</button></div><input className="content-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search Arabic in this surah" />{filteredAyahs.length === 0 && <p className="muted">No matching ayahs.</p>}<div className="reader-list">{filteredAyahs.map(item => <article className="ayah-card" key={item.id}><div className="ayah-meta"><span>{item.ayah}</span><button onClick={() => update(toggleBookmark(state, item.id, 'quran_ayah'))}>{state.bookmarks[item.id] ? '★' : '☆'}</button></div><p className="ayah-arabic" dir="rtl" lang="ar" style={{ fontSize }}>{item.arabic}</p><p className="footnote">Tanzil Project · Uthmani v1.1 · {item.id}</p><button onClick={() => update(recordQuranProgress(state, item.surah, item.ayah))}>Save as last read</button></article>)}</div><div className="row"><button onClick={() => setFontSize(Math.max(20, fontSize - 2))}>A−</button><span>{fontSize}px</span><button onClick={() => setFontSize(Math.min(44, fontSize + 2))}>A+</button></div></>}</div>}
 
-    {section === 'names' && <div className="card"><p className="eyebrow">99 NAMES OF ALLAH</p><h2>Selected source enumeration</h2><p className="muted">This is a source-backed enumeration from the selected dataset. Exact enumerations and English wording can differ between scholarly sources, so NoorTools does not label this “scholar verified”.</p><div className="quran-slot-list">{names.map(name => <button className="quran-slot" key={name.id} onClick={() => setSelectedName(name)}><span>{name.id.split(':')[1].padStart(2, '0')}</span><b>{name.transliteration}</b><small>{name.meaning}</small></button>)}</div>{selectedName && <DetailCard title={selectedName.transliteration} arabic={selectedName.arabic} translation={selectedName.meaning} transliteration={selectedName.transliteration} reference={selectedName.source.reference} source={selectedName.source} bookmarked={Boolean(state.bookmarks[selectedName.id])} onBookmark={() => update(toggleBookmark(state, selectedName.id, 'allah_name'))} onShare={() => void shareName(selectedName)} />}</div>}
+    {section === 'names' && <div className="card"><p className="eyebrow">99 NAMES OF ALLAH</p><h2>Selected source enumeration</h2>{dailyName && <div className="card content-hero"><p className="eyebrow">NAME OF THE DAY</p><h3>{dailyName.transliteration}</h3><p className="ayah-arabic" dir="rtl" lang="ar">{dailyName.arabic}</p><p>{dailyName.meaning}</p><small>Daily presentation is deterministic from the selected source list; it does not represent user activity or a scholar ranking.</small></div>}<p className="muted">This is a source-backed enumeration from the selected dataset. Exact enumerations and English wording can differ between scholarly sources, so NoorTools does not label this “scholar verified”.</p><div className="quran-slot-list">{names.map(name => <button className="quran-slot" key={name.id} onClick={() => setSelectedName(name)}><span>{name.id.split(':')[1].padStart(2, '0')}</span><b>{name.transliteration}</b><small>{name.meaning}</small></button>)}</div>{selectedName && <DetailCard title={selectedName.transliteration} arabic={selectedName.arabic} translation={selectedName.meaning} transliteration={selectedName.transliteration} reference={selectedName.source.reference} source={selectedName.source} bookmarked={Boolean(state.bookmarks[selectedName.id])} onBookmark={() => update(toggleBookmark(state, selectedName.id, 'allah_name'))} onShare={() => void shareName(selectedName)} />}{message && <p className="sensor-status">{message}</p>}</div>}
 
     {section === 'duas' && <div className="card"><p className="eyebrow">DUAS</p><h2>Source-backed supplications</h2><div className="row">{duaCategories.map(category => <button key={category} className={duaCategory === category ? 'selected' : ''} onClick={() => setDuaCategory(category)}>{category}</button>)}</div><div className="reader-list">{filteredDuas.map(item => <DetailCard key={item.id} title={item.title} arabic={item.arabic} translation={item.translation} transliteration={item.transliteration || undefined} reference={item.reference} source={item.source} count={item.count} bookmarked={Boolean(state.bookmarks[item.id])} onBookmark={() => update(toggleBookmark(state, item.id, 'dua'))} />)}</div><p className="footnote">Category labels are NoorTools navigation taxonomy derived from source titles; they do not add authenticity claims.</p></div>}
 
