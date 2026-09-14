@@ -33,10 +33,20 @@ function validate(root: unknown): QuranTranslationDataset {
     if (ids.has(item.id)) throw new Error(`Duplicate Quran translation id ${item.id}.`)
     ids.add(item.id)
     if (item.language !== 'en' || item.translator !== 'Marmaduke William Pickthall' || item.edition !== 'The Meaning of the Glorious Koran (1930)') throw new Error(`Unexpected Pickthall metadata for ${item.id}.`)
-    if (!item.text.trim() || !isObject(item.source) || item.source.id !== 'quran-translation.pickthall.1930' || item.source.redistributionStatus !== 'cleared' || item.source.verificationStatus !== 'verified' || !item.source.contentHash) throw new Error(`Translation rights metadata failed for ${item.id}.`)
+    if (!item.text.trim() || !isObject(item.source) || item.source.id !== 'quran-translation.pickthall.1930' || item.source.redistributionStatus !== 'cleared' || item.source.verificationStatus !== 'verified' || !/^[a-f0-9]{64}$/.test(item.source.contentHash)) throw new Error(`Translation rights metadata failed for ${item.id}.`)
     if (item.reviewState !== 'pending_scholar_review' && item.reviewState !== 'scholar_reviewed') throw new Error(`Translation review state failed for ${item.id}.`)
   }
   return { schema: 'noortools.quran-translations', version: 1, translations: items }
+}
+
+export function searchQuranTranslations(items: QuranTranslation[], query: string): QuranTranslation[] {
+  const needle = query.trim().toLocaleLowerCase()
+  if (!needle) return []
+  return items.filter(item => `${item.surah}:${item.ayah} ${item.text}`.toLocaleLowerCase().includes(needle))
+}
+
+export function toggleTranslationBookmark(bookmarks: string[], id: string): string[] {
+  return bookmarks.includes(id) ? bookmarks.filter(item => item !== id) : [...bookmarks, id]
 }
 
 export async function loadQuranTranslations(): Promise<QuranTranslationDataset> {
