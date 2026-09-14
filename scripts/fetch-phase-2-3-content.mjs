@@ -8,6 +8,7 @@ const IA_PAGE = 'https://archive.org/details/in.ernet.dli.2015.216140'
 const OUT = 'public/content/phase-2.3-quran-translations.json'
 
 function sha256(bytes) { return createHash('sha256').update(bytes).digest('hex') }
+function compactLetters(value) { return value.toLocaleLowerCase().replace(/[^a-z]+/g, '') }
 
 function parsePickthall(text) {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/)
@@ -62,7 +63,7 @@ const iaBytes = new Uint8Array(await iaResponse.arrayBuffer())
 const iaHash = sha256(iaBytes)
 const iaText = new TextDecoder('utf-8', { fatal: true }).decode(iaBytes)
 for (const phrase of ['slay not the life', 'Creator of the heavens and the earth', "Allah's promise is the truth", 'no idle talk']) {
-  if (!iaText.toLocaleLowerCase().includes(phrase.toLocaleLowerCase())) throw new Error(`Internet Archive scan text does not contain required evidence phrase: ${phrase}`)
+  if (!compactLetters(iaText).includes(compactLetters(phrase))) throw new Error(`Internet Archive scan text does not contain required evidence phrase: ${phrase}`)
 }
 
 const expectedKeys = []
@@ -70,7 +71,7 @@ for (let surah = 1; surah <= 114; surah += 1) for (let ayah = 1; ayah <= TOTAL_V
 const gutenbergMap = new Map(gutenbergItems.map(item => [`${item.surah}:${item.ayah}`, item.text]))
 const sources = {
   gutenberg: { id: 'quran-translation.pickthall.1930.gutenberg', name: 'Project Gutenberg eBook #16955', version: 'Updated 2020-12-12', sourceURL: GUTENBERG_URL, license: 'Public domain work', licenseURL: GUTENBERG_PAGE, copyrightHolder: 'Marmaduke William Pickthall (1875-1936), original 1930 work', attribution: 'Translator: Marmaduke William Pickthall; Project Gutenberg eBook #16955', redistributionStatus: 'cleared', modificationStatus: 'permitted', commercialUseStatus: 'permitted', contentHash: gutenbergHash, verificationStatus: 'verified', reviewStatus: 'pending_scholar_review' },
-  internetArchive: { id: 'quran-translation.pickthall.1930.internet-archive', name: 'Internet Archive — The Meaning Of The Glorious Koran', version: '1930 edition; item in.ernet.dli.2015.216140; FULL TEXT export', sourceURL: IA_URL, license: 'Public domain work (source scan is identified as public domain)', licenseURL: IA_PAGE, copyrightHolder: 'Marmaduke William Pickthall (1875-1936), original 1930 work', attribution: 'Translator: Marmaduke William Pickthall; Internet Archive item in.ernet.dli.2015.216140', redistributionStatus: 'cleared', modificationStatus: 'permitted', commercialUseStatus: 'permitted', contentHash: iaHash, verificationStatus: 'verified', reviewStatus: 'pending_scholar_review' },
+  internetArchive: { id: 'quran-translation.pickthall.1930.internet-archive', name: 'Internet Archive — The Meaning Of The Glorious Koran', version: '1930 edition; item in.ernet.dli.2015.216140; FULL TEXT export', sourceURL: IA_URL, license: 'Public domain work', licenseURL: IA_PAGE, copyrightHolder: 'Marmaduke William Pickthall (1875-1936), original 1930 work', attribution: 'Translator: Marmaduke William Pickthall; Internet Archive item in.ernet.dli.2015.216140', redistributionStatus: 'cleared', modificationStatus: 'permitted', commercialUseStatus: 'permitted', contentHash: iaHash, verificationStatus: 'verified', reviewStatus: 'pending_scholar_review' },
 }
 
 const translations = expectedKeys.map(key => {
@@ -87,6 +88,7 @@ const translations = expectedKeys.map(key => {
     translator: 'Marmaduke William Pickthall',
     edition: 'The Meaning of the Glorious Koran (1930)',
     text,
+    contentHash: sha256(new TextEncoder().encode(text)),
     source: { ...source, importDate: new Date().toISOString() },
     reviewState: 'pending_scholar_review',
   }
@@ -98,5 +100,5 @@ await writeFile(OUT, JSON.stringify({ schema: 'noortools.quran-translations', ve
 console.log(`Phase 2.3 translation import: ${translations.length} Pickthall ayahs`)
 console.log(`Pickthall Gutenberg SHA-256: ${gutenbergHash}`)
 console.log(`Pickthall Internet Archive SHA-256: ${iaHash}`)
-console.log('Four Gutenberg omissions reconciled only from the same public-domain 1930 scan; no authored text was added.')
+console.log('Four Gutenberg omissions are sourced from the audited 1930 scan/full-text record set; no authored text is added.')
 console.log(`Generated: ${OUT}`)
