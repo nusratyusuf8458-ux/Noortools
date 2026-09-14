@@ -28,10 +28,10 @@ describe('local storage', () => {
     localStorage.setItem('noortools:v2', JSON.stringify({ version: 2, location: { lat: 999, lon: 2, label: 'bad' }, tasbih: { total: -1 } }))
     const recovered = loadState()
     expect(recovered.location).toBeNull()
-    expect(recovered.tasbih.total).toBe(-1)
+    expect(recovered.tasbih.total).toBe(0)
   })
 
-  it('migrates the previous version without seeding activity', () => {
+  it('migrates the previous version without inventing session history', () => {
     localStorage.setItem('noortools:v1', JSON.stringify({ version: 1, location: null, salah: {}, tasbih: { count: 2, target: 33, dhikr: 'SubhanAllah', sessions: 4, total: 9 } }))
     const migrated = loadState()
     expect(migrated.version).toBe(2)
