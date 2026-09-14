@@ -5,14 +5,15 @@ import type { ReligiousContentItem } from './content'
 const base: ReligiousContentItem = {
   id: 'test:1',
   type: 'dua',
-  title: 'TEST',
+  title: 'TEST FIXTURE',
   source: {
+    sourceId: 'fixture',
     source: 'Test source',
     version: 'test-1',
     license: 'test',
-    sourceUrl: 'https://example.com',
+    sourceUrl: 'https://example.invalid',
     verificationStatus: 'needs_review',
-    reviewerStatus: 'not_reviewed',
+    reviewStatus: 'not_reviewed',
   },
 }
 
@@ -24,10 +25,11 @@ describe('content verification workflow', () => {
   })
 
   it('requires a named reviewer and records date/status/notes', () => {
-    expect(() => applyReviewDecision(base, { reviewerName: '', reviewerRole: 'qualified_scholar', reviewDate: '2026-09-14' })).toThrow()
-    const reviewed = applyReviewDecision(base, { reviewerName: 'Named Reviewer', reviewerRole: 'qualified_scholar', reviewDate: '2026-09-14', notes: 'TEST REVIEW ONLY' })
+    expect(() => applyReviewDecision(base, { reviewer: '', reviewerRole: 'qualified_scholar', reviewDate: '2026-09-14' })).toThrow()
+    const reviewed = applyReviewDecision(base, { reviewer: 'Qualified Test Reviewer', reviewerRole: 'qualified_scholar', reviewDate: '2026-09-14', notes: 'TEST REVIEW ONLY' })
     expect(reviewed.source.verificationStatus).toBe('verified')
-    expect(reviewed.source.reviewerStatus).toBe('reviewed')
+    expect(reviewed.source.reviewStatus).toBe('reviewed')
+    expect(reviewed.source.reviewer).toBe('Qualified Test Reviewer')
     expect(reviewed.source.reviewDate).toBe('2026-09-14')
     expect(reviewIsRecorded(reviewed.source)).toBe(true)
   })
