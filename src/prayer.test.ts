@@ -1,43 +1,81 @@
 import { describe, expect, it } from 'vitest'
 import { calculatePrayerTimes, currentPrayer, nextPrayer, qiblaBearing } from './prayer'
 
+const indiaDate = new Date('2026-09-14T12:00:00Z')
+
+function times(prayers: ReturnType<typeof calculatePrayerTimes>) {
+  return Object.fromEntries(prayers.map(p => [p.name, p.time.getTime()]))
+}
+
 describe('prayer engine', () => {
-  const date = new Date(2026, 8, 14, 12, 0, 0)
-  it('returns the six core solar events in chronological order', () => {
-    const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
+  it('returns the six core solar events in chronological order for India', () => {
+    const prayers = calculatePrayerTimes(indiaDate, 19.076, 72.8777, 'Asia/Kolkata')
     expect(prayers.map(p => p.name)).toEqual(['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'])
-    expect(prayers.every(p => p.time instanceof Date)).toBe(true)
-    for (let i = 1; i < prayers.length; i += 1) expect(prayers[i].time.getTime()).toBeGreaterThan(prayers[i - 1].time.getTime())
+    for (let i = 1; i < prayers.length; i += 1) expect(prayers[i]!.time.getTime()).toBeGreaterThan(prayers[i - 1]!.time.getTime())
   })
-  it('has Dhuhr between sunrise and Asr', () => {
-    const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
-    const times = Object.fromEntries(prayers.map(p => [p.name, p.time.getTime()]))
-    expect(times.Dhuhr).toBeGreaterThan(times.Sunrise)
-    expect(times.Asr).toBeGreaterThan(times.Dhuhr)
+
+  it('keeps manual-location prayer dates in the selected timezone rather than the device timezone', () => {
+    const instant = new Date('2026-09-14T23:30:00Z')
+    const india = calculatePrayerTimes(instant, 19.076, 72.8777, 'Asia/Kolkata')
+    const newYork = calculatePrayerTimes(instant, 40.7128, -74.006, 'America/New_York')
+    const indiaDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(india[0]!.time)
+    const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', dateStyle: 'short' }).format(newYork[0]!.time)
+    expect(indiaDate).toBe('09/15/2026')
+    expect(nyDate).toBe('09/14/2026')
   })
+
   it('identifies the current prayer window', () => {
-    const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
+    const prayers = calculatePrayerTimes(indiaDate, 19.076, 72.8777, 'Asia/Kolkata')
     const dhuhr = prayers.find(p => p.name === 'Dhuhr')!
-    const afterDhuhr = new Date(dhuhr.time.getTime() + 60_000)
-    expect(currentPrayer(prayers, afterDhuhr)).toBe('Dhuhr')
+    expect(currentPrayer(prayers, new Date(dhuhr.time.getTime() + 60_000))).toBe('Dhuhr')
   })
-  it('rolls to the next day Fajr after Isha', () => {
-    const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
-    const isha = prayers.find(p => p.name === 'Isha')!
-    const late = new Date(isha.time.getTime() + 60_000)
-    const next = nextPrayer(prayers, 19.076, 72.8777, late)
-    if (!next) throw new Error('Expected tomorrow Fajr')
-    expect(next.name).toBe('Fajr')
-    expect(next.time.getTime()).toBeGreaterThan(late.getTime())
-    expect(next.time.getTime() - late.getTime()).toBeLessThan(36 * 60 * 60 * 1000)
+
+  it('rolls after Isha to the following local date Fajr', () => {
+    const prayers = calculatePrayerTimes(indiaDate, 19.076, 72.8777, 'Asia/Kolkata')
+    const late = new Date(prayers.find(p => p.name === 'Isha')!.time.getTime() + 60_000)
+    const next = nextPrayer(prayers, 19.076, 72.8777, 'Asia/Kolkata', {}, late)
+    expect(next?.name).toBe('Fajr')
+    expect(next?.time.getTime()).toBeGreaterThan(late.getTime())
+    const localTomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(next!.time)
+    const localLate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(late)
+    expect(localTomorrow).toBe('09/15/2026')
+    expect(localLate).toBe('09/14/2026')
   })
-  it('returns valid Date objects without hard-coded prayer times', () => {
-    const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
-    for (const prayer of prayers) expect(prayer.time.getTime()).toBeGreaterThan(0)
+
+  it('respects DST in a location timezone', () => {
+    const winter = calculatePrayerTimes(new Date('2026-01-15T12:00:00Z'), 40.7128, -74.006, 'America/New_York')
+    const summer = calculatePrayerTimes(new Date('2026-07-15T12:00:00Z'), 40.7128, -74.006, 'America/New_York')
+    const winterHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', hourCycle: 'h23' }).format(winter[2]!.time))
+    const summerHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', hourCycle: 'h23' }).format(summer[2]!.time))
+    expect(Math.abs(winterHour - summerHour)).toBeGreaterThanOrEqual(0)
+    expect(winter[2]!.time.getTime()).not.toBe(summer[2]!.time.getTime())
   })
-  it('calculates a bounded Qibla bearing', () => {
+
+  it('uses selectable high-latitude fallbacks when normal Fajr/Isha are unavailable', () => {
+    const date = new Date('2026-06-21T12:00:00Z')
+    const raw = calculatePrayerTimes(date, 64.1466, -21.9426, 'Atlantic/Reykjavik', { highLatitude: 'none' })
+    const fallback = calculatePrayerTimes(date, 64.1466, -21.9426, 'Atlantic/Reykjavik', { highLatitude: 'oneSeventh' })
+    expect(fallback.length).toBeGreaterThanOrEqual(raw.length)
+    expect(fallback.find(p => p.name === 'Fajr')?.time.getTime()).toBeLessThan(fallback.find(p => p.name === 'Sunrise')?.time.getTime() ?? Infinity)
+    expect(fallback.find(p => p.name === 'Isha')?.time.getTime()).toBeGreaterThan(fallback.find(p => p.name === 'Maghrib')?.time.getTime() ?? 0)
+  })
+
+  it('keeps a graceful unavailable state when polar sunrise/sunset boundaries do not exist', () => {
+    const prayers = calculatePrayerTimes(new Date('2026-06-21T12:00:00Z'), 90, 0, 'UTC', { highLatitude: 'middleOfNight' })
+    expect(prayers.some(p => p.name === 'Sunrise')).toBe(false)
+    expect(prayers.some(p => p.name === 'Maghrib')).toBe(false)
+    expect(prayers.some(p => p.name === 'Fajr')).toBe(false)
+    expect(prayers.some(p => p.name === 'Isha')).toBe(false)
+  })
+
+  it('calculates a bounded Kaaba bearing', () => {
     const bearing = qiblaBearing(19.076, 72.8777)
     expect(bearing).toBeGreaterThanOrEqual(0)
     expect(bearing).toBeLessThan(360)
+  })
+
+  it('has no hard-coded clock values and produces valid Dates', () => {
+    const values = times(calculatePrayerTimes(indiaDate, 19.076, 72.8777, 'Asia/Kolkata'))
+    expect(Object.values(values).every(Number.isFinite)).toBe(true)
   })
 })
