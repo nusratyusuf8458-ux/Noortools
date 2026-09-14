@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CONTENT_CATEGORIES, QURAN_SOURCE, QURAN_SURAH_SLOTS, contentSourceLabel, type ContentCategory } from './content'
 import { loadContentState, recordQuranProgress, saveContentState, toggleBookmark, type ContentUserState } from './contentStorage'
+import { ALLAH_NAME_FIELDS, AZKAR_CATEGORIES, DUA_CATEGORIES, HADITH_COLLECTION_SECTIONS } from './contentTaxonomy'
 
 type Section = 'overview' | 'quran' | 'names' | 'duas' | 'azkar' | 'hadith' | 'search' | 'bookmarks'
 const categoryBySection: Record<Exclude<Section, 'overview' | 'quran' | 'search' | 'bookmarks'>, ContentCategory> = { names: 'Names of Allah', duas: 'Duas', azkar: 'Morning & Evening Azkar', hadith: 'Hadith' }
@@ -12,7 +13,6 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
   const [query, setQuery] = useState('')
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null)
   const [readingFontSize, setReadingFontSize] = useState(28)
-
   const update = (next: ContentUserState) => { setContentState(next); saveContentState(next) }
   const searchSummary = useMemo(() => query.trim() ? 'Search is ready for verified content. No unverified religious text is indexed.' : 'Search across Quran, Hadith, Duas, Azkar and Names of Allah once verified datasets are connected.', [query])
 
@@ -30,13 +30,16 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
     </>}
 
     {section === 'quran' && <>
-      <div className="card"><p className="eyebrow">QURAN</p><h2>114 Surahs</h2><p className="muted">The reader structure is complete, but no Quran text is shipped in this build until an explicit source import is performed and passes structural + provenance validation.</p><div className="quran-slot-list">{QURAN_SURAH_SLOTS.map(slot => <button key={slot.number} className="quran-slot" onClick={() => setSelectedSurah(slot.number)} aria-label={`Surah ${slot.number}, content unavailable`}> <span>{String(slot.number).padStart(3, '0')}</span><b>Surah {slot.number}</b><small>{slot.available ? 'Available' : 'Not imported'}</small></button>)}</div></div>
+      <div className="card"><p className="eyebrow">QURAN</p><h2>114 Surahs</h2><p className="muted">The reader structure is complete, but no Quran text is shipped in this build until an explicit source import is performed and passes structural + provenance validation.</p><div className="quran-slot-list">{QURAN_SURAH_SLOTS.map(slot => <button key={slot.number} className="quran-slot" onClick={() => setSelectedSurah(slot.number)} aria-label={`Surah ${slot.number}, content unavailable`}><span>{String(slot.number).padStart(3, '0')}</span><b>Surah {slot.number}</b><small>{slot.available ? 'Available' : 'Not imported'}</small></button>)}</div></div>
       <SourceCard source={QURAN_SOURCE} />
       {selectedSurah !== null && <div className="card"><div className="card-head"><div><p className="eyebrow">SURAH {selectedSurah}</p><h3>Ayah-by-ayah reader</h3></div><button onClick={() => setSelectedSurah(null)}>Close</button></div><ReaderUnavailable fontSize={readingFontSize} setFontSize={setReadingFontSize} /><button onClick={() => update(recordQuranProgress(contentState, selectedSurah, 1))} disabled>Save reading position</button></div>}
       <div className="card"><h3>Quran architecture</h3><div className="architecture-grid">{quranSections.map(item => <span key={item}>{item}<small>ready</small></span>)}</div></div>
     </>}
 
-    {['names', 'duas', 'azkar', 'hadith'].includes(section) && <UnavailableCategory category={categoryBySection[section as keyof typeof categoryBySection]} />}
+    {section === 'names' && <TaxonomyCategory category={categoryBySection.names} items={ALLAH_NAME_FIELDS} />}
+    {section === 'duas' && <TaxonomyCategory category={categoryBySection.duas} items={DUA_CATEGORIES} />}
+    {section === 'azkar' && <TaxonomyCategory category={categoryBySection.azkar} items={AZKAR_CATEGORIES} />}
+    {section === 'hadith' && <TaxonomyCategory category={categoryBySection.hadith} items={HADITH_COLLECTION_SECTIONS} />}
 
     {section === 'search' && <div className="card"><p className="eyebrow">GLOBAL SEARCH</p><h2>Search verified content</h2><input className="content-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search after verified content is connected" aria-label="Search verified content" /><p className="muted">{searchSummary}</p><div className="empty-panel"><span>⌕</span><p>No search results because no unverified or placeholder religious corpus is indexed.</p></div></div>}
 
@@ -44,9 +47,8 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
   </section>
 }
 
-function UnavailableCategory({ category }: { category: ContentCategory }) {
-  const categoryText = category === 'Duas' ? 'Morning, evening, sleep, food, travel, home, protection, forgiveness, prayer and difficulty categories are scaffolded without fabricated text.' : category === 'Morning & Evening Azkar' ? 'Categories, count/progress, completion/reset, favorites and history are scaffolded without fabricated dhikr.' : category === 'Hadith' ? 'Collections, books, chapters, Arabic, translations, references, search, bookmarks and share architecture are scaffolded without fabricated hadith.' : 'Arabic name, transliteration, meaning, reference, details, search, favorites, progress and daily presentation are scaffolded without fabricated meanings.'
-  return <div className="card"><p className="eyebrow">{category.toUpperCase()}</p><h2>{category}</h2><p className="muted">{categoryText}</p><div className="empty-panel"><span>◌</span><div><h3>Verified source not connected</h3><p>No content is displayed until a legitimate, source-specific dataset and permission chain are recorded.</p></div></div><div className="architecture-grid"><span>Search<small>ready</small></span><span>Bookmarks<small>ready</small></span><span>Verification status<small>ready</small></span><span>Scholar review<small>ready</small></span></div></div>
+function TaxonomyCategory({ category, items }: { category: ContentCategory; items: readonly string[] }) {
+  return <div className="card"><p className="eyebrow">{category.toUpperCase()}</p><h2>{category}</h2><p className="muted">Architecture and categories are present, but no religious text is displayed until a legitimate source, license/permission chain and verification record are connected.</p><div className="architecture-grid">{items.map(item => <span key={item}>{item}<small>scaffolded</small></span>)}</div><div className="empty-panel"><span>◌</span><div><h3>Verified source not connected</h3><p>No content is displayed until a source-specific dataset and verification state are recorded. Scholar review is not claimed.</p></div></div></div>
 }
 
 function ReaderUnavailable({ fontSize, setFontSize }: { fontSize: number; setFontSize: (value: number) => void }) {
