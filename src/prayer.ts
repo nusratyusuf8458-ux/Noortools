@@ -74,15 +74,15 @@ function toLocalInstant(date: CalendarDate, timeZone: string, localHourValue: nu
   return new Date(guess)
 }
 
-function fallbackFajr(sunrise: Date, nightHours: number, method: HighLatitudeMethod, angle: number, date: CalendarDate, timeZone: string) {
+function fallbackFajr(sunrise: Date, nightHours: number, method: HighLatitudeMethod, angle: number) {
   const portion = method === 'middleOfNight' ? nightHours / 2 : method === 'oneSeventh' ? nightHours / 7 : (angle / 60) * nightHours
-  return toLocalInstant(date, timeZone, localHour(sunrise, timeZone) - portion)
+  return new Date(sunrise.getTime() - portion * 3600000)
 }
 
-function fallbackIsha(sunset: Date, nextSunrise: Date, method: HighLatitudeMethod, angle: number, date: CalendarDate, timeZone: string) {
+function fallbackIsha(sunset: Date, nextSunrise: Date, method: HighLatitudeMethod, angle: number) {
   const nightHours = (nextSunrise.getTime() - sunset.getTime()) / 3600000
   const portion = method === 'middleOfNight' ? nightHours / 2 : method === 'oneSeventh' ? nightHours / 7 : (angle / 60) * nightHours
-  return toLocalInstant(date, timeZone, localHour(sunset, timeZone) + portion)
+  return new Date(sunset.getTime() + portion * 3600000)
 }
 
 function instantAtLocalNoon(date: CalendarDate, timeZone: string) {
@@ -108,8 +108,8 @@ export function calculatePrayerTimes(date: Date, lat: number, lon: number, timeZ
   const nextSunrise = solarTime(tomorrow, lat, lon, -0.833, true)
   if (highLatitude !== 'none' && sunrise && sunset && nextSunrise) {
     const nightHours = (nextSunrise.getTime() - sunset.getTime()) / 3600000
-    if (!resolvedFajr) resolvedFajr = fallbackFajr(sunrise, nightHours, highLatitude, angles.fajr, localDate, timeZone)
-    if (!resolvedIsha) resolvedIsha = fallbackIsha(sunset, nextSunrise, highLatitude, angles.isha, localDate, timeZone)
+    if (!resolvedFajr) resolvedFajr = fallbackFajr(sunrise, nightHours, highLatitude, angles.fajr)
+    if (!resolvedIsha) resolvedIsha = fallbackIsha(sunset, nextSunrise, highLatitude, angles.isha)
   }
   const events: [PrayerName, Date | null][] = [['Fajr', resolvedFajr], ['Sunrise', sunrise], ['Dhuhr', dhuhr], ['Asr', asrTime], ['Maghrib', sunset], ['Isha', resolvedIsha]]
   return events.filter((x): x is [PrayerName, Date] => x[1] instanceof Date && Number.isFinite(x[1].getTime())).map(([name, time]) => ({ name, time }))
