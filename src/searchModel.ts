@@ -2,7 +2,7 @@ export type SearchContentType = 'quran' | 'names' | 'duas' | 'azkar'
 export type SearchFilter = 'all' | SearchContentType
 
 export function normalizeSearchText(value: string): string {
-  return value.normalize('NFKD').replace(/\p{M}/gu, '').toLocaleLowerCase()
+  return value.normalize('NFKD').replace(/\p{M}/gu, '').replace(/[ٱأإآ]/g, 'ا').toLocaleLowerCase()
 }
 
 export function searchMatches(value: string, query: string): boolean {
