@@ -22,6 +22,16 @@ function buildSearchMap(value: string): { searchable: string; starts: number[]; 
   return { searchable, starts, ends }
 }
 
+function extendAcrossMarks(text: string, end: number): number {
+  let cursor = end
+  while (cursor < text.length) {
+    const char = text[cursor]
+    if (normalizeSearchText(char) !== '') break
+    cursor += char.length
+  }
+  return cursor
+}
+
 export function findHighlightRanges(text: string, query: string): Array<[number, number]> {
   const needle = normalizeSearchText(query.trim())
   if (!text || !needle) return []
@@ -31,7 +41,7 @@ export function findHighlightRanges(text: string, query: string): Array<[number,
   while (from <= mapped.searchable.length - needle.length) {
     const index = mapped.searchable.indexOf(needle, from)
     if (index < 0) break
-    ranges.push([mapped.starts[index], mapped.ends[index + needle.length - 1]])
+    ranges.push([mapped.starts[index], extendAcrossMarks(text, mapped.ends[index + needle.length - 1])])
     from = index + needle.length
   }
   return ranges
