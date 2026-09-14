@@ -63,12 +63,15 @@ function asr(date: CalendarDate, lat: number, lon: number, shadowRatio: number) 
 }
 
 function toLocalInstant(date: CalendarDate, timeZone: string, localHourValue: number) {
-  const hour = Math.floor(localHourValue)
-  const minuteFloat = (localHourValue - hour) * 60
+  let hourValue = localHourValue
+  while (hourValue < 0) hourValue += 24
+  while (hourValue >= 24) hourValue -= 24
+  const hour = Math.floor(hourValue)
+  const minuteFloat = (hourValue - hour) * 60
   const minute = Math.floor(minuteFloat)
   const second = Math.round((minuteFloat - minute) * 60)
   let guess = Date.UTC(date.year, date.month - 1, date.day, hour, minute, second)
-  for (let i = 0; i < 3; i += 1) guess -= timezoneOffsetMinutes(new Date(guess), timeZone) * 60000
+  for (let i = 0; i < 4; i += 1) guess -= timezoneOffsetMinutes(new Date(guess), timeZone) * 60000
   return new Date(guess)
 }
 
@@ -80,8 +83,13 @@ function fallbackFajr(sunrise: Date, nightHours: number, method: HighLatitudeMet
 function fallbackIsha(sunset: Date, nextSunrise: Date, method: HighLatitudeMethod, angle: number, date: CalendarDate, timeZone: string) {
   const nightHours = (nextSunrise.getTime() - sunset.getTime()) / 3600000
   const portion = method === 'middleOfNight' ? nightHours / 2 : method === 'oneSeventh' ? nightHours / 7 : (angle / 60) * nightHours
-  const sunsetLocal = localHour(sunset, timeZone)
-  return toLocalInstant(date, timeZone, sunsetLocal + portion)
+  return toLocalInstant(date, timeZone, localHour(sunset, timeZone) + portion)
+}
+
+function instantAtLocalNoon(date: CalendarDate, timeZone: string) {
+  let guess = Date.UTC(date.year, date.month - 1, date.day, 12)
+  for (let i = 0; i < 4; i += 1) guess -= timezoneOffsetMinutes(new Date(guess), timeZone) * 60000
+  return new Date(guess)
 }
 
 export function calculatePrayerTimes(date: Date, lat: number, lon: number, timeZone = 'UTC', settings: PrayerSettings = {}): Prayer[] {
@@ -91,15 +99,13 @@ export function calculatePrayerTimes(date: Date, lat: number, lon: number, timeZ
   const angles = method === 'ISNA' ? { fajr: 15, isha: 15 } : { fajr: 18, isha: 17 }
   const localDate = calendarDate(date, timeZone)
   const tomorrow = addDays(localDate, 1)
-  const fajr = solarTime(localDate, lat, lon, -angles.fajr, true)
+  let resolvedFajr = solarTime(localDate, lat, lon, -angles.fajr, true)
   const sunrise = solarTime(localDate, lat, lon, -0.833, true)
   const dhuhr = solarNoon(localDate, lon)
   const asrTime = asr(localDate, lat, lon, hanafi ? 2 : 1)
   const sunset = solarTime(localDate, lat, lon, -0.833, false)
-  const isha = solarTime(localDate, lat, lon, -angles.isha, false)
+  let resolvedIsha = solarTime(localDate, lat, lon, -angles.isha, false)
   const nextSunrise = solarTime(tomorrow, lat, lon, -0.833, true)
-  let resolvedFajr = fajr
-  let resolvedIsha = isha
   if (highLatitude !== 'none' && sunrise && sunset && nextSunrise) {
     const nightHours = (nextSunrise.getTime() - sunset.getTime()) / 3600000
     if (!resolvedFajr) resolvedFajr = fallbackFajr(sunrise, nightHours, highLatitude, angles.fajr, localDate, timeZone)
@@ -120,8 +126,7 @@ export function nextPrayer(prayers: Prayer[], lat: number, lon: number, timeZone
   const upcoming = prayers.find(p => p.time.getTime() > now.getTime())
   if (upcoming) return upcoming
   const tomorrow = addDays(calendarDate(now, timeZone), 1)
-  const tomorrowInstant = fromUtcMinutes(tomorrow, 0)
-  return calculatePrayerTimes(tomorrowInstant, lat, lon, timeZone, settings).find(p => p.name === 'Fajr') ?? null
+  return calculatePrayerTimes(instantAtLocalNoon(tomorrow, timeZone), lat, lon, timeZone, settings).find(p => p.name === 'Fajr') ?? null
 }
 
 export function currentPrayer(prayers: Prayer[], now = new Date()): PrayerName | null {
