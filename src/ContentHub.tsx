@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CONTENT_CATEGORIES, QURAN_SOURCE, contentSourceLabel, type ContentCategory } from './content'
+import { CONTENT_CATEGORIES, QURAN_SOURCE, contentSourceLabel, type ContentCategory, type ReligiousContentItem, type SourceMetadata } from './content'
 import { loadContentState, recordQuranProgress, saveContentState, toggleBookmark, type ContentUserState } from './contentStorage'
 import { ALLAH_NAME_FIELDS, AZKAR_CATEGORIES, DUA_CATEGORIES, HADITH_COLLECTION_SECTIONS } from './contentTaxonomy'
 import { loadQuran, type QuranRuntime } from './quranRuntime'
@@ -21,6 +21,13 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
 
   useEffect(() => { void loadQuran().then(setQuran).catch(error => setQuranError(error instanceof Error ? error.message : 'Quran dataset could not be loaded.')) }, [])
   const update = (next: ContentUserState) => { setContentState(next); saveContentState(next) }
+  const toContentSource = (source: QuranRuntime['source']): SourceMetadata => ({
+    sourceId: source.sourceId, source: source.sourceName, version: source.sourceVersion, edition: source.edition,
+    license: source.license, licenseUrl: source.licenseUrl, sourceUrl: source.sourceUrl, reference: source.reference,
+    verificationStatus: source.verificationStatus, reviewStatus: source.reviewStatus, contentHash: source.contentHash,
+    importVersion: source.importVersion, importedAt: source.importedAt, reviewer: source.reviewer ?? undefined,
+    reviewDate: source.reviewDate ?? undefined, reviewerNotes: source.reviewNotes ?? undefined,
+  })
   const filteredAyahs = useMemo(() => {
     if (!quran || selectedSurah === null) return []
     const wanted = query.trim().toLocaleLowerCase()
@@ -33,13 +40,14 @@ export default function ContentHub({ onBack }: { onBack: () => void }) {
     if (partition === 'surah') setSelectedSurah(index)
     const start = partition === 'juz' ? quran.juz[index - 1] : quran.pages[index - 1]
     if (start) setSelectedSurah(start.surah)
-    setQuery('')
-    setSection('quran')
+    setQuery(''); setSection('quran')
   }
 
   const exportReview = () => {
     if (!quran) return
-    const blob = new Blob([JSON.stringify(buildReviewPackage(quran.ayahs.map(item => ({ ...item, source: quran.source }))), null, 2)], { type: 'application/json' })
+    const source = toContentSource(quran.source)
+    const items = quran.ayahs.map(item => ({ id: item.id, type: item.type, surah: item.surah, ayah: item.ayah, arabic: item.arabic, source } as ReligiousContentItem & { surah: number; ayah: number }))
+    const blob = new Blob([JSON.stringify(buildReviewPackage(items), null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a'); link.href = url; link.download = 'noortools-quran-review-package-v1.json'; link.click(); URL.revokeObjectURL(url)
     setReviewMessage('Scholar review package exported. It records source metadata and explicitly shows that no NoorTools scholar review is currently recorded.')
