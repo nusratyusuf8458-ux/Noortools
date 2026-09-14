@@ -17,9 +17,8 @@ describe('prayer engine', () => {
   })
   it('identifies the current prayer window', () => {
     const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
-    const dhuhr = prayers.find(p => p.name === 'Dhuhr')
-    expect(dhuhr).toBeDefined()
-    const afterDhuhr = new Date((dhuhr as Prayer).time.getTime() + 60_000)
+    const dhuhr = prayers.find(p => p.name === 'Dhuhr')!
+    const afterDhuhr = new Date(dhuhr.time.getTime() + 60_000)
     expect(currentPrayer(prayers, afterDhuhr)).toBe('Dhuhr')
   })
   it('rolls to the next day Fajr after Isha', () => {
@@ -30,7 +29,7 @@ describe('prayer engine', () => {
     expect(next?.time.getTime()).toBeGreaterThan(late.getTime())
     expect(next?.time.getTime() - late.getTime()).toBeLessThan(36 * 60 * 60 * 1000)
   })
-  it('returns valid device-local Date objects without hard-coded clock values', () => {
+  it('returns valid Date objects without hard-coded prayer times', () => {
     const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
     for (const prayer of prayers) expect(prayer.time.getTime()).toBeGreaterThan(0)
   })
