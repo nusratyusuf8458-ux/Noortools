@@ -3,12 +3,15 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const GUTENBERG_URL = 'https://www.gutenberg.org/ebooks/16955.txt.utf-8'
 const GUTENBERG_PAGE = 'https://www.gutenberg.org/ebooks/16955'
-const IA_URL = 'https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt'
-const IA_PAGE = 'https://archive.org/details/in.ernet.dli.2015.216140'
 const OUT = 'public/content/phase-2.3-quran-translations.json'
+const EXCLUDED = [
+  { surah: 17, ayah: 33, printedPage: 285, reason: 'Absent from Project Gutenberg transcription; exact printed text not conclusively verified for redistribution.', sourceName: 'Internet Archive — The Meaning Of The Glorious Koran', sourceURL: 'https://archive.org/details/in.ernet.dli.2015.216140', recordURL: 'https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt', edition: 'The Meaning of the Glorious Koran, 1930', publisher: 'George Allen & Unwin', digitization: 'scan with ABBYY OCR-derived full text', manualCorrection: false, shippingStatus: 'unavailable_pending_verification' },
+  { surah: 39, ayah: 46, printedPage: 478, reason: 'Absent from Project Gutenberg transcription; exact printed text not conclusively verified for redistribution.', sourceName: 'Internet Archive — The Meaning Of The Glorious Koran', sourceURL: 'https://archive.org/details/in.ernet.dli.2015.216140', recordURL: 'https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt', edition: 'The Meaning of the Glorious Koran, 1930', publisher: 'George Allen & Unwin', digitization: 'scan with ABBYY OCR-derived full text', manualCorrection: false, shippingStatus: 'unavailable_pending_verification' },
+  { surah: 45, ayah: 32, printedPage: 516, reason: 'Absent from Project Gutenberg transcription; Internet Archive OCR wording differs from a previously hardcoded fallback, so no fallback is distributable.', sourceName: 'Internet Archive — The Meaning Of The Glorious Koran', sourceURL: 'https://archive.org/details/in.ernet.dli.2015.216140', recordURL: 'https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt', edition: 'The Meaning of the Glorious Koran, 1930', publisher: 'George Allen & Unwin', digitization: 'scan with ABBYY OCR-derived full text', manualCorrection: false, shippingStatus: 'unavailable_pending_verification' },
+  { surah: 56, ayah: 26, printedPage: 562, reason: 'Absent from Project Gutenberg transcription; available OCR evidence conflicts with the previous fallback, which was rejected as incorrect.', sourceName: 'Internet Archive — The Meaning Of The Glorious Koran', sourceURL: 'https://archive.org/details/in.ernet.dli.2015.216140', recordURL: 'https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt', edition: 'The Meaning of the Glorious Koran, 1930', publisher: 'George Allen & Unwin', digitization: 'scan with ABBYY OCR-derived full text', manualCorrection: false, shippingStatus: 'unavailable_pending_verification' },
+]
 
 function sha256(bytes) { return createHash('sha256').update(bytes).digest('hex') }
-function compactLetters(value) { return value.toLocaleLowerCase().replace(/[^a-z]+/g, '') }
 
 function parsePickthall(text) {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/)
@@ -25,28 +28,13 @@ function parsePickthall(text) {
       continue
     }
     if (!current) continue
-    if (line.startsWith('P: ')) {
-      current.parts.push(line.slice(3).trim())
-      collecting = true
-    } else if (/^(Y|S):\s/.test(line)) {
-      collecting = false
-    } else if (collecting && line.trim() && !/^[-*]{3,}$/.test(line.trim())) {
-      current.parts.push(line.trim())
-    }
+    if (line.startsWith('P: ')) { current.parts.push(line.slice(3).trim()); collecting = true }
+    else if (/^(Y|S):\s/.test(line)) collecting = false
+    else if (collecting && line.trim() && !/^[-*]{3,}$/.test(line.trim())) current.parts.push(line.trim())
   }
   if (current?.parts.length) items.push({ ...current, text: current.parts.join(' ').replace(/\s+/g, ' ').trim() })
   return items
 }
-
-const MISSING_FROM_GUTENBERG = new Map([
-  ['17:33', 'And slay not the life which Allah hath forbidden save with right. Whoso is slain wrongfully, We have given power unto his heir, but let him not commit excess in slaying. Lo! he will be helped.'],
-  ['39:46', 'Say: O Allah! Creator of the heavens and the earth! Knower of the Invisible and the Visible! Thou wilt judge between Thy slaves concerning that wherein they used to differ.'],
-  [
-    '45:32',
-    "And when it was said: Lo! Allah's promise is the truth, and there is no doubt of the Hour's coming, ye said: We know not what the Hour is. We deem it naught but an opinion, and we are not convinced.",
-  ],
-  ['56:26', 'No idle talk, no cause of sin,'],
-])
 
 const tanzilManifest = JSON.parse(await readFile('public/content/quran-manifest.json', 'utf8'))
 const surahCounts = tanzilManifest.surahCounts
@@ -56,51 +44,53 @@ const response = await fetch(GUTENBERG_URL)
 if (!response.ok) throw new Error(`Pickthall Gutenberg source download failed: HTTP ${response.status}`)
 const gutenbergBytes = new Uint8Array(await response.arrayBuffer())
 const gutenbergHash = sha256(gutenbergBytes)
-const gutenbergText = new TextDecoder('utf-8', { fatal: true }).decode(gutenbergBytes)
-const gutenbergItems = parsePickthall(gutenbergText)
+const gutenbergItems = parsePickthall(new TextDecoder('utf-8', { fatal: true }).decode(gutenbergBytes))
+const excludedKeys = new Set(EXCLUDED.map(item => `${item.surah}:${item.ayah}`))
 
-const iaResponse = await fetch(IA_URL)
-if (!iaResponse.ok) throw new Error(`Pickthall Internet Archive scan text download failed: HTTP ${iaResponse.status}`)
-const iaBytes = new Uint8Array(await iaResponse.arrayBuffer())
-const iaHash = sha256(iaBytes)
-const iaText = new TextDecoder('utf-8', { fatal: true }).decode(iaBytes)
-for (const phrase of ['slay not the life', 'Creator of the heavens and the earth', "Allah's promise is the truth", 'no idle talk']) {
-  if (!compactLetters(iaText).includes(compactLetters(phrase))) throw new Error(`Internet Archive scan text does not contain required evidence phrase: ${phrase}`)
-}
-
-const expectedKeys = []
-for (let surah = 1; surah <= 114; surah += 1) for (let ayah = 1; ayah <= surahCounts[surah - 1]; ayah += 1) expectedKeys.push(`${surah}:${ayah}`)
-const gutenbergMap = new Map(gutenbergItems.map(item => [`${item.surah}:${item.ayah}`, item.text]))
-const sources = {
-  gutenberg: { id: 'quran-translation.pickthall.1930.gutenberg', name: 'Project Gutenberg eBook #16955', version: 'Updated 2020-12-12', sourceURL: GUTENBERG_URL, license: 'Public domain work', licenseURL: GUTENBERG_PAGE, copyrightHolder: 'Marmaduke William Pickthall (1875-1936), original 1930 work', attribution: 'Translator: Marmaduke William Pickthall; Project Gutenberg eBook #16955', redistributionStatus: 'cleared', modificationStatus: 'permitted', commercialUseStatus: 'permitted', contentHash: gutenbergHash, verificationStatus: 'verified', reviewStatus: 'pending_scholar_review' },
-  internetArchive: { id: 'quran-translation.pickthall.1930.internet-archive', name: 'Internet Archive — The Meaning Of The Glorious Koran', version: '1930 edition; item in.ernet.dli.2015.216140; FULL TEXT export', sourceURL: IA_URL, license: 'Public domain work', licenseURL: IA_PAGE, copyrightHolder: 'Marmaduke William Pickthall (1875-1936), original 1930 work', attribution: 'Translator: Marmaduke William Pickthall; Internet Archive item in.ernet.dli.2015.216140', redistributionStatus: 'cleared', modificationStatus: 'permitted', commercialUseStatus: 'permitted', contentHash: iaHash, verificationStatus: 'verified', reviewStatus: 'pending_scholar_review' },
-}
-
-const translations = expectedKeys.map(key => {
-  const [surah, ayah] = key.split(':').map(Number)
-  const fromGutenberg = gutenbergMap.get(key)
-  const text = fromGutenberg || MISSING_FROM_GUTENBERG.get(key)
-  if (!text) throw new Error(`Missing Pickthall ayah with no audited source: ${key}`)
-  const source = fromGutenberg ? sources.gutenberg : sources.internetArchive
-  return {
-    id: `quran-translation:en:pickthall-1930:${surah}:${ayah}`,
-    surah,
-    ayah,
+const translations = gutenbergItems
+  .filter(item => !excludedKeys.has(`${item.surah}:${item.ayah}`))
+  .map(item => ({
+    id: `quran-translation:en:pickthall-1930:${item.surah}:${item.ayah}`,
+    surah: item.surah,
+    ayah: item.ayah,
     language: 'en',
     translator: 'Marmaduke William Pickthall',
     edition: 'The Meaning of the Glorious Koran (1930)',
-    text,
-    contentHash: sha256(new TextEncoder().encode(text)),
-    source: { ...source, importDate: new Date().toISOString() },
+    text: item.text,
+    contentHash: sha256(new TextEncoder().encode(item.text)),
+    source: {
+      id: 'quran-translation.pickthall.1930.gutenberg',
+      name: 'Project Gutenberg eBook #16955',
+      version: 'Updated 2020-12-12',
+      sourceURL: GUTENBERG_URL,
+      license: 'Public domain work',
+      licenseURL: GUTENBERG_PAGE,
+      copyrightHolder: 'Marmaduke William Pickthall (1875-1936), original 1930 work',
+      attribution: 'Translator: Marmaduke William Pickthall; Project Gutenberg eBook #16955',
+      redistributionStatus: 'cleared',
+      modificationStatus: 'permitted',
+      commercialUseStatus: 'permitted',
+      contentHash: gutenbergHash,
+      verificationStatus: 'verified',
+      reviewStatus: 'pending_scholar_review',
+      importDate: new Date().toISOString(),
+    },
     reviewState: 'pending_scholar_review',
-  }
-})
+  }))
 
-if (translations.length !== 6236) throw new Error(`Pickthall import expected 6236 ayahs; received ${translations.length}.`)
+if (translations.length !== 6232) throw new Error(`Pickthall distributable set expected 6232 ayahs; received ${translations.length}.`)
+const allKeys = new Set(translations.map(item => `${item.surah}:${item.ayah}`))
+if (EXCLUDED.some(item => allKeys.has(`${item.surah}:${item.ayah}`))) throw new Error('An excluded Pickthall record was accidentally included.')
+if (translations.some(item => !item.text.trim())) throw new Error('A distributable Pickthall record has empty translation text.')
+
 await mkdir('public/content', { recursive: true })
-await writeFile(OUT, JSON.stringify({ schema: 'noortools.quran-translations', version: 1, translations }, null, 2) + '\n', 'utf8')
-console.log(`Phase 2.3 translation import: ${translations.length} Pickthall ayahs`)
+await writeFile(OUT, JSON.stringify({
+  schema: 'noortools.quran-translations', version: 2,
+  translations,
+  excluded: EXCLUDED.map(item => ({ ...item, sourceHash: null, recordContentHash: null, reviewer: null, reviewState: 'unavailable' })),
+  audit: { canonicalAyahCount: 6236, distributableAyahCount: 6232, excludedAyahCount: 4, excludedKeys: EXCLUDED.map(item => `${item.surah}:${item.ayah}`), sourceHash: gutenbergHash, source: 'Project Gutenberg eBook #16955', note: 'The four excluded records are not reconstructed, normalized from another edition, or copied from Tanzil Arabic.' },
+}, null, 2) + '\n', 'utf8')
+console.log(`Phase 2.3 translation import: ${translations.length} distributable Pickthall ayahs / 4 excluded pending verification`)
 console.log(`Pickthall Gutenberg SHA-256: ${gutenbergHash}`)
-console.log(`Pickthall Internet Archive SHA-256: ${iaHash}`)
-console.log('Four Gutenberg omissions are sourced from the audited 1930 scan/full-text record set; no authored text is added.')
+console.log(`Excluded: ${EXCLUDED.map(item => `${item.surah}:${item.ayah} p.${item.printedPage}`).join(', ')}`)
 console.log(`Generated: ${OUT}`)
