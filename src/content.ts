@@ -76,15 +76,20 @@ export function contentSourceLabel(source: SourceMetadata): string {
   return `${source.source}${source.edition ? ` · ${source.edition}` : ''} · v${source.version}`
 }
 
+export function searchVerifiedContent(items: ReligiousContentItem[], query: string): ReligiousContentItem[] {
+  const needle = query.trim().toLocaleLowerCase()
+  if (!needle) return []
+  return items.filter(item => isPresentable(item)).filter(item => [item.id, item.title, item.arabic, item.translation, item.transliteration, item.source.reference, item.source.collection].filter(Boolean).some(value => value!.toLocaleLowerCase().includes(needle)))
+}
+
 export function validateQuranItems(items: QuranAyah[]): { valid: boolean; errors: string[] } {
   const errors: string[] = []
   const keys = new Set<string>()
-  let expectedId = ''
   for (const item of items) {
     const key = `${item.surah}:${item.ayah}`
     if (keys.has(key)) errors.push(`Duplicate ayah ${key}.`)
     keys.add(key)
-    expectedId = `quran:${item.surah}:${item.ayah}`
+    const expectedId = `quran:${item.surah}:${item.ayah}`
     if (item.id !== expectedId) errors.push(`Ayah ${key} has unstable id ${item.id}.`)
     if (item.source.verificationStatus !== 'verified') errors.push(`Ayah ${key} is not verified.`)
     if (item.source.source.trim() === '' || item.source.version.trim() === '' || item.source.license.trim() === '' || item.source.sourceUrl.trim() === '') errors.push(`Ayah ${key} is missing source metadata.`)
