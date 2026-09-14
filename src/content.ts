@@ -22,70 +22,34 @@ export type SourceMetadata = {
   reviewDate?: string
 }
 
-export type ReligiousContentItem = {
-  id: string
-  type: ContentType
-  arabic?: string
-  translation?: string
-  transliteration?: string
-  title?: string
-  contentHash?: string
-  source: SourceMetadata
-}
-
-export type QuranAyah = ReligiousContentItem & {
-  type: 'quran_ayah'
-  surah: number
-  ayah: number
-  juz?: number
-  page?: number
-  audioUrl?: string
-}
-
-export type QuranSurahSlot = {
-  number: number
-  ayahCount?: number
-  available: boolean
-}
-
+export type ReligiousContentItem = { id: string; type: ContentType; arabic?: string; translation?: string; transliteration?: string; title?: string; contentHash?: string; source: SourceMetadata }
+export type QuranAyah = ReligiousContentItem & { type: 'quran_ayah'; surah: number; ayah: number; juz?: number; page?: number; audioUrl?: string }
+export type QuranSurahSlot = { number: number; ayahCount?: number; available: boolean }
 export type ContentCategory = 'Quran' | 'Names of Allah' | 'Duas' | 'Morning & Evening Azkar' | 'Hadith'
 
 export const QURAN_SOURCE: SourceMetadata = {
-  sourceId: 'tanzil-uthmani',
-  source: 'Tanzil Project',
-  edition: 'Uthmani',
-  version: '1.1',
-  license: 'Creative Commons Attribution 3.0; verbatim copying only; no text changes',
+  sourceId: 'tanzil-uthmani', source: 'Tanzil Project', edition: 'Uthmani', version: '1.1',
+  license: 'Creative Commons Attribution 3.0; verbatim copying only; changing the text is not allowed',
   licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
-  sourceUrl: 'https://tanzil.net/download/',
-  verificationStatus: 'unavailable',
-  reviewStatus: 'not_reviewed',
+  sourceUrl: 'https://tanzil.net/pub/download/index.php?quranType=uthmani&outType=txt-2&agree=true&marks=true&sajdah=true&rub=true&stanween=true',
+  verificationStatus: 'verified', reviewStatus: 'not_reviewed',
 }
 
-export const QURAN_SURAH_SLOTS: QuranSurahSlot[] = Array.from({ length: 114 }, (_, index) => ({ number: index + 1, available: false }))
+export const QURAN_SURAH_SLOTS: QuranSurahSlot[] = Array.from({ length: 114 }, (_, index) => ({ number: index + 1, available: true }))
 export const CONTENT_CATEGORIES: ContentCategory[] = ['Quran', 'Names of Allah', 'Duas', 'Morning & Evening Azkar', 'Hadith']
 
-export function isPresentable(item: ReligiousContentItem): boolean {
-  return item.source.verificationStatus === 'verified' && Boolean(item.arabic || item.translation || item.title)
-}
-
-export function contentSourceLabel(source: SourceMetadata): string {
-  return `${source.source}${source.edition ? ` · ${source.edition}` : ''} · v${source.version}`
-}
-
+export function isPresentable(item: ReligiousContentItem): boolean { return item.source.verificationStatus === 'verified' && Boolean(item.arabic || item.translation || item.title) }
+export function contentSourceLabel(source: SourceMetadata): string { return `${source.source}${source.edition ? ` · ${source.edition}` : ''} · v${source.version}` }
 export function searchVerifiedContent(items: ReligiousContentItem[], query: string): ReligiousContentItem[] {
   const needle = query.trim().toLocaleLowerCase()
   if (!needle) return []
   return items.filter(isPresentable).filter(item => [item.id, item.title, item.arabic, item.translation, item.transliteration, item.source.reference, item.source.collection].filter(Boolean).some(value => value!.toLocaleLowerCase().includes(needle)))
 }
-
 export function validateQuranItems(items: QuranAyah[]): { valid: boolean; errors: string[] } {
-  const errors: string[] = []
-  const keys = new Set<string>()
+  const errors: string[] = []; const keys = new Set<string>()
   for (const item of items) {
     const key = `${item.surah}:${item.ayah}`
-    if (keys.has(key)) errors.push(`Duplicate ayah ${key}.`)
-    keys.add(key)
+    if (keys.has(key)) errors.push(`Duplicate ayah ${key}.`); keys.add(key)
     if (item.id !== `quran:${item.surah}:${item.ayah}`) errors.push(`Ayah ${key} has unstable id ${item.id}.`)
     if (item.source.verificationStatus !== 'verified') errors.push(`Ayah ${key} is not verified.`)
     if (!item.source.sourceId || !item.source.source.trim() || !item.source.version.trim() || !item.source.license.trim() || !item.source.sourceUrl.trim()) errors.push(`Ayah ${key} is missing source metadata.`)
@@ -94,7 +58,6 @@ export function validateQuranItems(items: QuranAyah[]): { valid: boolean; errors
   }
   return { valid: errors.length === 0, errors }
 }
-
 export function quranAvailability(items: QuranAyah[]): { availableSurahs: number; totalAyahs: number; status: VerificationStatus } {
   if (items.length === 0) return { availableSurahs: 0, totalAyahs: 0, status: 'unavailable' }
   const result = validateQuranItems(items)
