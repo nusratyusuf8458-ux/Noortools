@@ -20,9 +20,10 @@ export default function Phase23Launcher() {
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null)
   const [translations, setTranslations] = useState<QuranTranslation[]>([])
   const [bookmarks, setBookmarks] = useState<string[]>(safeBookmarks)
+  const [excluded, setExcluded] = useState<{ surah: number; ayah: number; printedPage: number }[]>([])
   const [error, setError] = useState('')
 
-  useEffect(() => { if (!open) return; void loadQuranTranslations().then(dataset => setTranslations(dataset.translations)).catch(e => setError(e instanceof Error ? e.message : 'Translation could not be loaded.')) }, [open])
+  useEffect(() => { if (!open) return; void loadQuranTranslations().then(dataset => { setTranslations(dataset.translations); setExcluded(dataset.excluded.map(item => ({ surah: item.surah, ayah: item.ayah, printedPage: item.printedPage }))) }).catch(e => setError(e instanceof Error ? e.message : 'Translation could not be loaded.')) }, [open])
   useEffect(() => { localStorage.setItem('noortools:phase23:translation-bookmarks', JSON.stringify(bookmarks)) }, [bookmarks])
 
   const filtered = useMemo(() => searchQuranTranslations(translations.filter(item => selectedSurah === null || item.surah === selectedSurah), query).slice(0, 80), [translations, selectedSurah, query])
@@ -43,7 +44,8 @@ export default function Phase23Launcher() {
           <label>Surah<select value={selectedSurah ?? ''} onChange={e => setSelectedSurah(e.target.value ? Number(e.target.value) : null)}><option value="">All Surahs</option>{surahs.map(n => <option key={n} value={n}>Surah {n}</option>)}</select></label>
           <input className="content-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search English translation or 2:255" />
           {filtered.length === 0 ? <p className="muted">{translations.length ? 'No matching translation ayahs.' : 'Loading the verified translation…'}</p> : <div className="reader-list">{filtered.map(item => <article className="ayah-card" key={item.id}><div className="ayah-meta"><span>{item.surah}:{item.ayah}</span><button aria-label={`${bookmarks.includes(item.id) ? 'Remove' : 'Add'} bookmark for ${item.surah}:${item.ayah}`} onClick={() => setBookmarks(current => toggleTranslationBookmark(current, item.id))}>{bookmarks.includes(item.id) ? '★' : '☆'}</button></div><p>{item.text}</p><p className="footnote">{item.edition} · {item.translator}<br />Source: {item.source.name}<br />{item.source.sourceURL}<br />Source SHA-256 {item.source.contentHash}<br />Record SHA-256 {item.contentHash}</p></article>)}</div>}
-          <p className="footnote">The Project Gutenberg transcription contains 6,232 Pickthall verse records. Four omitted ayahs are sourced separately from the same public-domain 1930 edition preserved by Internet Archive, with record-level source metadata and hashes. Final review state: pending_scholar_review.</p>
+          <div className="empty-panel"><span>!</span><p><b>4 ayahs are unavailable pending exact edition verification:</b> {excluded.map(item => `${item.surah}:${item.ayah} (printed p. ${item.printedPage})`).join(', ')}. They are not reconstructed, merged from another edition, or copied from Tanzil Arabic.</p></div>
+          <p className="footnote">Distributable set: 6,232 of the canonical 6,236 ayah IDs. Translation review state: pending_scholar_review. No “Scholar Verified” claim is made.</p>
         </div>}
 
         {section === 'hadith' && <div className="card"><p className="eyebrow">HADITH</p><h2>Unavailable — source not cleared</h2><p className="muted">No major Hadith collection is bundled or displayed yet. Sunnah.com API access does not establish a redistribution grant, and the audited fawazahmed0 corpus has unresolved text-license questions.</p><span className="status-pill">{HADITH_UI_STATE.reviewState}</span><p className="footnote">No Hadith number, Arabic, translation, grading, or reference is fabricated. A collection can be integrated only after edition-specific provenance and redistribution permission are proven.</p></div>}
