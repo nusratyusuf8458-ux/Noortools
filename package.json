@@ -1,6 +1,6 @@
 {
   "name":"noortools","private":true,"version":"0.1.0","type":"module",
-  "scripts":{"dev":"vite","build":"tsc -b && vite build","preview":"vite preview","test":"vitest run","test:watch":"vitest","lint":"tsc --noEmit"},
+  "scripts":{"dev":"vite","build":"tsc -b && vite build","preview":"vite preview","test":"vitest run --environment jsdom","test:watch":"vitest --environment jsdom","lint":"tsc --noEmit"},
   "dependencies":{"@vitejs/plugin-react":"latest","vite":"latest","typescript":"latest","react":"latest","react-dom":"latest","vitest":"latest"},
   "devDependencies":{"jsdom":"latest"}
 }
