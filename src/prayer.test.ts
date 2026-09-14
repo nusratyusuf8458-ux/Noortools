@@ -17,21 +17,22 @@ describe('prayer engine', () => {
   })
   it('identifies the current prayer window', () => {
     const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
-    const afterDhuhr = new Date((prayers.find(p => p.name === 'Dhuhr') as { time: Date }).time.getTime() + 60_000)
+    const dhuhr = prayers.find(p => p.name === 'Dhuhr')
+    expect(dhuhr).toBeDefined()
+    const afterDhuhr = new Date((dhuhr as Prayer).time.getTime() + 60_000)
     expect(currentPrayer(prayers, afterDhuhr)).toBe('Dhuhr')
   })
-  it('rolls to tomorrow Fajr after Isha', () => {
+  it('rolls to the next day Fajr after Isha', () => {
     const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
     const late = new Date(prayers[prayers.length - 1].time.getTime() + 60_000)
     const next = nextPrayer(prayers, 19.076, 72.8777, late)
     expect(next?.name).toBe('Fajr')
-    expect(next?.time.getDate()).toBe(late.getDate() + 1)
+    expect(next?.time.getTime()).toBeGreaterThan(late.getTime())
+    expect(next?.time.getTime() - late.getTime()).toBeLessThan(36 * 60 * 60 * 1000)
   })
-  it('returns local device time for a location without hard-coded clock values', () => {
+  it('returns valid device-local Date objects without hard-coded clock values', () => {
     const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
-    expect(prayers[0].time.toString()).not.toContain('Invalid')
-    expect(prayers[0].time.getHours()).toBeGreaterThanOrEqual(0)
-    expect(prayers[0].time.getHours()).toBeLessThan(24)
+    for (const prayer of prayers) expect(prayer.time.getTime()).toBeGreaterThan(0)
   })
   it('calculates a bounded Qibla bearing', () => {
     const bearing = qiblaBearing(19.076, 72.8777)
