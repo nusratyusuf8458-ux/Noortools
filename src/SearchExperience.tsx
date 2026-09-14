@@ -4,7 +4,7 @@ import { loadVerifiedContent, type AllahName, type Azkar, type Dua } from './ver
 import { loadQuranTranslations, type QuranTranslation, type ExcludedQuranTranslation } from './quranTranslation'
 import { addSearchHistory, clearSearchHistory, loadSearchHistory } from './searchHistory'
 import { HighlightedText } from './searchPresentation'
-import { normalizeSearchText, searchEmptyState, searchMatches, type SearchContentType, type SearchFilter } from './searchModel'
+import { searchEmptyState, searchMatches, type SearchContentType, type SearchFilter } from './searchModel'
 
 type Result = { id: string; type: SearchContentType; label: string; title: string; text: string; source: string; status: string; rtl?: boolean; unavailable?: boolean }
 
@@ -94,5 +94,3 @@ export default function SearchExperience({ onClose }: { onClose: () => void }) {
     </div>
   </div>
 }
-
-void normalizeSearchText
