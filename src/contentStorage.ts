@@ -2,13 +2,7 @@ import type { ContentType } from './content'
 
 export type Bookmark = { id: string; type: ContentType; addedAt: string; favorite: boolean }
 export type QuranReadingHistoryEntry = { id: string; surah: number; ayah: number; at: string }
-export type QuranReadingProgress = {
-  lastReadId: string | null
-  positions: Record<string, { ayah: number; updatedAt: string }>
-  readAyahs: Record<string, string>
-  history: QuranReadingHistoryEntry[]
-  activityDates: Record<string, number>
-}
+export type QuranReadingProgress = { lastReadId: string | null; positions: Record<string, { ayah: number; updatedAt: string }>; readAyahs: Record<string, string>; history: QuranReadingHistoryEntry[]; activityDates: Record<string, number> }
 export type AzkarDay = Record<string, number>
 export type Note = { id: string; contentType: Exclude<ContentType, 'hadith' | 'quran_ayah'> | 'quran_ayah'; contentId: string; text: string; createdAt: string; updatedAt: string }
 export type ReminderKey = 'prayer' | 'morningAzkar' | 'eveningAzkar' | 'quranReading' | 'tasbih'
@@ -21,14 +15,16 @@ const EMPTY_REMINDERS: ReminderPreferences = { notificationsEnabled: false, perm
 const EMPTY: ContentUserState = { version: 3, bookmarks: {}, quran: { lastReadId: null, positions: {}, readAyahs: {}, history: [], activityDates: {} }, itemProgress: {}, azkarDaily: {}, notes: {}, reminders: EMPTY_REMINDERS }
 function cloneEmpty(): ContentUserState { return structuredClone(EMPTY) }
 function isObject(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
+function isContentType(value: unknown): value is ContentType { return value === 'quran_ayah' || value === 'allah_name' || value === 'dua' || value === 'azkar' || value === 'hadith' }
+function isNoteType(value: unknown): value is Note['contentType'] { return value === 'quran_ayah' || value === 'allah_name' || value === 'dua' || value === 'azkar' }
 function validTime(value: unknown, fallback: string): string { return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : fallback }
 function notificationPermission(): ReminderPreferences['permission'] { return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission }
 function validReminders(value: unknown): ReminderPreferences { const source = isObject(value) ? value : {}; const rawItems = isObject(source.items) ? source.items : {}; const fallback = cloneEmpty().reminders; const item = (key: ReminderKey) => { const raw = isObject(rawItems[key]) ? rawItems[key] : {}; const base = fallback.items[key]; return { enabled: raw.enabled === true, time: validTime(raw.time, base.time) } }; return { notificationsEnabled: source.notificationsEnabled === true, permission: source.permission === 'granted' || source.permission === 'denied' || source.permission === 'unsupported' ? source.permission : notificationPermission(), items: { prayer: item('prayer'), morningAzkar: item('morningAzkar'), eveningAzkar: item('eveningAzkar'), quranReading: item('quranReading'), tasbih: item('tasbih') } } }
-function validNotes(value: unknown): Record<string, Note> { if (!isObject(value)) return {}; const result: Record<string, Note> = {}; for (const [id, raw] of Object.entries(value)) { if (!isObject(raw) || raw.id !== id || typeof raw.contentId !== 'string' || !raw.contentId.trim() || typeof raw.text !== 'string' || typeof raw.createdAt !== 'string' || typeof raw.updatedAt !== 'string') continue; if (raw.contentType !== 'quran_ayah' && raw.contentType !== 'allah_name' && raw.contentType !== 'dua' && raw.contentType !== 'azkar') continue; if (!raw.text.trim()) continue; result[id] = { id, contentType: raw.contentType, contentId: raw.contentId, text: raw.text.trim().slice(0, 5000), createdAt: raw.createdAt, updatedAt: raw.updatedAt } } return result }
+function validNotes(value: unknown): Record<string, Note> { if (!isObject(value)) return {}; const result: Record<string, Note> = {}; for (const [id, raw] of Object.entries(value)) { if (!isObject(raw) || raw.id !== id || typeof raw.contentId !== 'string' || !raw.contentId.trim() || typeof raw.text !== 'string' || typeof raw.createdAt !== 'string' || typeof raw.updatedAt !== 'string' || !isNoteType(raw.contentType)) continue; if (!raw.text.trim()) continue; result[id] = { id, contentType: raw.contentType, contentId: raw.contentId, text: raw.text.trim().slice(0, 5000), createdAt: raw.createdAt, updatedAt: raw.updatedAt } } return result }
 function migrate(value: unknown): ContentUserState {
   if (!isObject(value)) return cloneEmpty()
   const bookmarks: Record<string, Bookmark> = {}
-  if (isObject(value.bookmarks)) for (const [id, raw] of Object.entries(value.bookmarks)) { if (!isObject(raw)) continue; const type = raw.type; const addedAt = raw.addedAt; if ((type === 'quran_ayah' || type === 'allah_name' || type === 'dua' || type === 'azkar' || type === 'hadith') && typeof addedAt === 'string') bookmarks[id] = { id, type, addedAt, favorite: raw.favorite === true } }
+  if (isObject(value.bookmarks)) for (const [id, raw] of Object.entries(value.bookmarks)) { if (!isObject(raw) || !isContentType(raw.type) || typeof raw.addedAt !== 'string') continue; bookmarks[id] = { id, type: raw.type, addedAt: raw.addedAt, favorite: raw.favorite === true } }
   const quranSource = isObject(value.quran) ? value.quran : {}; const positions: QuranReadingProgress['positions'] = {}
   if (isObject(quranSource.positions)) for (const [surahId, raw] of Object.entries(quranSource.positions)) if (isObject(raw) && Number.isInteger(raw.ayah) && Number(raw.ayah) > 0 && typeof raw.updatedAt === 'string') positions[surahId] = { ayah: Number(raw.ayah), updatedAt: raw.updatedAt }
   const readAyahs: Record<string, string> = {}; if (isObject(quranSource.readAyahs)) for (const [id, at] of Object.entries(quranSource.readAyahs)) if (typeof at === 'string' && /^quran:\d+:\d+$/.test(id)) readAyahs[id] = at
