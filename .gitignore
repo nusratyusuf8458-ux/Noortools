@@ -1,0 +1,5 @@
+node_modules/
+dist/
+content-source/quran-uthmani.txt
+content-source/quran-verified.json
+content-source/quran-integrity-report.json
