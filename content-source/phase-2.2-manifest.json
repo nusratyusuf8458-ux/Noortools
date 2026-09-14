@@ -1,0 +1,76 @@
+{
+  "schema": "noortools.phase-2.2-source-manifest",
+  "version": 1,
+  "auditDate": "2026-09-14",
+  "datasets": [
+    {
+      "id": "allah-names.ummahlibrary.asma.1.0.0",
+      "type": "allah_name",
+      "sourceName": "UmmahLibrary / my-prayers/muslim-data",
+      "sourceVersion": "1.0.0",
+      "sourceCommit": "12c9a9123c235a8dd1f2e8524e1f53716b62f7e2",
+      "sourceUrl": "https://github.com/UmmahLibrary/ummah-library/blob/12c9a9123c235a8dd1f2e8524e1f53716b62f7e2/packages/data/datasets/asma.json",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "redistribution": "allowed with applicable attribution/license notices",
+      "verificationStatus": "source_verified",
+      "reviewStatus": "pending_scholar_review"
+    },
+    {
+      "id": "duas.fitrahive.2026-09-14",
+      "type": "dua",
+      "sourceName": "Fitrahive Dua & Dhikr",
+      "sourceVersion": "git:f42f895f914319a844c3e3c2279483cae060ea19",
+      "sourceCommit": "f42f895f914319a844c3e3c2279483cae060ea19",
+      "sourceUrl": "https://github.com/fitrahive/dua-dhikr/tree/f42f895f914319a844c3e3c2279483cae060ea19/data/dua-dhikr",
+      "license": "MIT",
+      "licenseUrl": "https://opensource.org/license/mit",
+      "redistribution": "allowed with copyright and license notice retained",
+      "verificationStatus": "source_verified",
+      "reviewStatus": "pending_scholar_review"
+    },
+    {
+      "id": "azkar.seen-arabic.2026-02-14",
+      "type": "azkar",
+      "sourceName": "Seen Arabic · Morning-And-Evening-Adhkar-DB",
+      "sourceVersion": "git:29d7623fede52eca835a789025dfda866e8cfe44",
+      "sourceCommit": "29d7623fede52eca835a789025dfda866e8cfe44",
+      "sourceUrl": "https://github.com/Seen-Arabic/Morning-And-Evening-Adhkar-DB/tree/29d7623fede52eca835a789025dfda866e8cfe44",
+      "license": "MIT",
+      "licenseUrl": "https://opensource.org/license/mit",
+      "redistribution": "allowed with copyright and license notice retained",
+      "verificationStatus": "source_verified",
+      "reviewStatus": "pending_scholar_review"
+    },
+    {
+      "id": "hadith.pending",
+      "type": "hadith",
+      "sourceName": "Not connected",
+      "sourceVersion": "pending",
+      "license": "pending source-specific redistribution permission",
+      "redistribution": "not cleared",
+      "verificationStatus": "unavailable",
+      "reviewStatus": "not_reviewed"
+    },
+    {
+      "id": "quran-translation.pending",
+      "type": "quran_translation",
+      "sourceName": "Not connected",
+      "sourceVersion": "pending specific translation edition",
+      "license": "pending translator/edition permission",
+      "redistribution": "not cleared",
+      "verificationStatus": "unavailable",
+      "reviewStatus": "not_reviewed"
+    },
+    {
+      "id": "quran-audio.pending",
+      "type": "quran_audio",
+      "sourceName": "Not connected",
+      "sourceVersion": "pending reciter/provider permission",
+      "license": "pending recording rights",
+      "redistribution": "not cleared",
+      "verificationStatus": "unavailable",
+      "reviewStatus": "not_reviewed"
+    }
+  ]
+}
