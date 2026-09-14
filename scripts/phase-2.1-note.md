@@ -1,0 +1,1 @@
+The dedicated phase-2.1 branch will be cut from this verified Phase-2 baseline before content integration. This file is temporary documentation and may be removed during branch preparation.
