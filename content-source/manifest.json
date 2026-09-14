@@ -1,21 +1,31 @@
 {
   "schema": "noortools.content-source-manifest",
-  "version": 1,
+  "version": 2,
   "sources": [
     {
       "id": "quran.tanzil.uthmani.1.1",
       "type": "quran_ayah",
+      "sourceId": "tanzil-uthmani",
       "source": "Tanzil Project",
       "edition": "Uthmani",
       "version": "1.1",
-      "license": "Creative Commons Attribution 3.0; verbatim/no-modification terms",
-      "sourceUrl": "https://tanzil.net/download/",
+      "license": "Creative Commons Attribution 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "sourceUrl": "https://tanzil.net/pub/download/index.php?quranType=uthmani&outType=txt-2&agree=true&marks=true&sajdah=true&rub=true&stanween=true",
+      "attributionUrl": "https://tanzil.net",
+      "redistribution": "Permitted in websites/applications only with clear source indication, a tanzil.net link and verbatim text; text changes are prohibited by the source terms.",
       "expectedAyahs": 6236,
       "expectedSurahs": 114,
-      "verificationStatus": "unavailable",
-      "reviewerStatus": "not_reviewed",
-      "rawFile": "quran-uthmani.txt",
-      "integrityReport": "quran-integrity-report.json"
+      "expectedJuz": 30,
+      "expectedPages": 604,
+      "expectedSha256": "b9027e22eb7e69d326f1eb7467fed8b7bc1eccbe1a894887ed2b3feb4ef5fc90",
+      "verificationStatus": "verified",
+      "reviewStatus": "not_reviewed",
+      "importVersion": "noortools-quran-tanzil-1.1",
+      "rawFile": "public/content/quran-uthmani-v1.1.txt",
+      "datasetFile": "public/content/quran-uthmani-v1.1.json",
+      "metadataFile": "public/content/quran-metadata.json",
+      "changeNotes": "Initial NoorTools integration; canonical Arabic is retained verbatim from the selected Tanzil Uthmani v1.1 download."
     },
     {
       "id": "quran.foundation.content-api",
@@ -25,8 +35,18 @@
       "license": "Quran Foundation Developer Terms + source-specific content terms",
       "sourceUrl": "https://api-docs.quran.com/",
       "verificationStatus": "unavailable",
-      "reviewerStatus": "not_reviewed",
-      "note": "Use through an approved authenticated provider/backend; do not bundle or expose client secrets."
+      "reviewStatus": "not_reviewed",
+      "note": "Provider interface only; no credentials or provider text is bundled."
+    },
+    {
+      "id": "quran.translation.tanzil",
+      "type": "quran_translation",
+      "source": "Not connected",
+      "version": "pending",
+      "license": "Tanzil translation redistribution permission not established for NoorTools",
+      "sourceUrl": "https://tanzil.net/trans/",
+      "verificationStatus": "unavailable",
+      "reviewStatus": "not_reviewed"
     },
     {
       "id": "names-of-allah.pending",
@@ -36,7 +56,7 @@
       "license": "pending source permission",
       "sourceUrl": "",
       "verificationStatus": "unavailable",
-      "reviewerStatus": "not_reviewed"
+      "reviewStatus": "not_reviewed"
     },
     {
       "id": "duas.pending",
@@ -46,7 +66,7 @@
       "license": "pending source permission",
       "sourceUrl": "",
       "verificationStatus": "unavailable",
-      "reviewerStatus": "not_reviewed"
+      "reviewStatus": "not_reviewed"
     },
     {
       "id": "azkar.pending",
@@ -56,7 +76,7 @@
       "license": "pending source permission",
       "sourceUrl": "",
       "verificationStatus": "unavailable",
-      "reviewerStatus": "not_reviewed"
+      "reviewStatus": "not_reviewed"
     },
     {
       "id": "hadith.pending",
@@ -66,7 +86,7 @@
       "license": "pending source permission",
       "sourceUrl": "",
       "verificationStatus": "unavailable",
-      "reviewerStatus": "not_reviewed"
+      "reviewStatus": "not_reviewed"
     }
   ]
 }
