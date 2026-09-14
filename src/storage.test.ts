@@ -86,10 +86,10 @@ describe('local storage', () => {
     const instant = new Date('2026-09-14T23:30:00Z')
     const salah = { '2026-09-14': { Fajr: true, Dhuhr: true, Asr: true, Maghrib: true, Isha: true }, '2026-09-15': { Fajr: true, Dhuhr: true, Asr: true, Maghrib: true, Isha: true } }
     expect(salahStats(salah, instant, 'Asia/Kolkata').todayCompleted).toBe(5)
-    expect(salahStats(salah, instant, 'Asia/Kolkata').streak).toBe(1)
+    expect(salahStats(salah, instant, 'Asia/Kolkata').streak).toBe(2)
     const sessions = [{ date: '2026-09-14', count: 10, target: 33, dhikr: 'SubhanAllah' }, { date: '2026-09-15', count: 20, target: 33, dhikr: 'SubhanAllah' }]
     expect(tasbihStats(sessions, instant, 'Asia/Kolkata').today).toBe(20)
-    expect(tasbihStats(sessions, instant, 'Asia/Kolkata').streak).toBe(1)
+    expect(tasbihStats(sessions, instant, 'Asia/Kolkata').streak).toBe(2)
   })
 
   it('calculates real Salah and Tasbih streaks and windows', () => {
