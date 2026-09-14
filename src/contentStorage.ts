@@ -1,6 +1,6 @@
 import type { ContentType } from './content'
 
-export type Bookmark = { id: string; type: ContentType; addedAt: string }
+export type Bookmark = { id: string; type: ContentType; addedAt: string; favorite: boolean }
 export type QuranReadingHistoryEntry = { id: string; surah: number; ayah: number; at: string }
 export type QuranReadingProgress = {
   lastReadId: string | null
@@ -73,7 +73,7 @@ function migrate(value: unknown): ContentUserState {
   if (isObject(value.bookmarks)) for (const [id, raw] of Object.entries(value.bookmarks)) {
     if (!isObject(raw)) continue
     const type = raw.type; const addedAt = raw.addedAt
-    if ((type === 'quran_ayah' || type === 'allah_name' || type === 'dua' || type === 'azkar' || type === 'hadith') && typeof addedAt === 'string') bookmarks[id] = { id, type, addedAt }
+    if ((type === 'quran_ayah' || type === 'allah_name' || type === 'dua' || type === 'azkar' || type === 'hadith') && typeof addedAt === 'string') bookmarks[id] = { id, type, addedAt, favorite: raw.favorite === true }
   }
   const quranSource = isObject(value.quran) ? value.quran : {}
   const positions: QuranReadingProgress['positions'] = {}
@@ -108,7 +108,8 @@ export function loadContentState(): ContentUserState {
 }
 export function saveContentState(state: ContentUserState): void { localStorage.setItem(KEY, JSON.stringify({ ...state, version: 3 })) }
 export function resetContentState(): ContentUserState { localStorage.removeItem(KEY); for (const key of LEGACY_KEYS) localStorage.removeItem(key); return cloneEmpty() }
-export function toggleBookmark(state: ContentUserState, id: string, type: ContentType, now = new Date()): ContentUserState { if (!id.trim()) return state; const next = structuredClone(state); if (next.bookmarks[id]) delete next.bookmarks[id]; else next.bookmarks[id] = { id, type, addedAt: now.toISOString() }; return next }
+export function toggleBookmark(state: ContentUserState, id: string, type: ContentType, now = new Date()): ContentUserState { if (!id.trim()) return state; const next = structuredClone(state); if (next.bookmarks[id]) delete next.bookmarks[id]; else next.bookmarks[id] = { id, type, addedAt: now.toISOString(), favorite: false }; return next }
+export function toggleFavorite(state: ContentUserState, id: string): ContentUserState { if (!state.bookmarks[id]) return state; const next = structuredClone(state); next.bookmarks[id].favorite = !next.bookmarks[id].favorite; return next }
 export function recordQuranProgress(state: ContentUserState, surah: number, ayah: number, now = new Date(), dateKey = localDateKey(now)): ContentUserState {
   if (!Number.isInteger(surah) || surah < 1 || surah > 114 || !Number.isInteger(ayah) || ayah < 1) return state
   const next = structuredClone(state); const id = `quran:${surah}:${ayah}`; const surahId = `quran:${surah}`; const at = now.toISOString()
