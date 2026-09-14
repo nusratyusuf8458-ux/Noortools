@@ -11,8 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run --environment jsdom",
     "test:watch": "vitest --environment jsdom",
-    "lint": "tsc --noEmit --pretty false",
-    "validate:quran": "node scripts/validate-tanzil-quran.mjs"
+    "lint": "tsc --noEmit --pretty false"
   },
   "dependencies": {
     "@photostructure/tz-lookup": "^11.6.1",
