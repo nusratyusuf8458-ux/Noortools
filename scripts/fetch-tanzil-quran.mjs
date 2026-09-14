@@ -6,7 +6,7 @@ const METADATA_URL = 'https://tanzil.net/res/text/metadata/quran-data.xml'
 const OUT_DIR = 'public/content'
 
 function fail(message) { throw new Error(`Tanzil import failed: ${message}`) }
-function attr(tag, name) { return tag.match(new RegExp(`${name}="([^"]*)"`))?.[1] ?? '' }
+function attr(tag, name) { return tag.match(new RegExp(`${name}\\s*=\\s*"([^"]*)"`, 'i'))?.[1] ?? '' }
 
 const [quranResponse, metadataResponse] = await Promise.all([
   fetch(QURAN_URL, { headers: { 'user-agent': 'NoorTools/phase-2.1 content importer' } }),
@@ -47,7 +47,7 @@ if (surahCounts.some(count => count === 0)) fail('one or more surahs are missing
 
 const metadataText = await metadataResponse.text()
 const suras = []
-for (const match of metadataText.matchAll(/<sura\b[^>]*\/?>(?:<\/sura>)?/g)) {
+for (const match of metadataText.matchAll(/<sura[^>]*>/gi)) {
   const tag = match[0]
   const number = Number(attr(tag, 'index'))
   if (!Number.isInteger(number) || number < 1 || number > 114) continue
@@ -56,7 +56,7 @@ for (const match of metadataText.matchAll(/<sura\b[^>]*\/?>(?:<\/sura>)?/g)) {
 if (suras.length !== 114 || suras.some((item, index) => item.number !== index + 1)) fail('metadata does not contain an ordered set of 114 surahs')
 for (const item of suras) if (item.ayahCount !== surahCounts[item.number - 1]) fail(`metadata ayah count mismatch for surah ${item.number}`)
 
-const partition = (tagName) => [...metadataText.matchAll(new RegExp(`<${tagName}\\b[^>]*>`, 'g'))].map(match => ({ index: Number(attr(match[0], 'index')), surah: Number(attr(match[0], 'sura')), ayah: Number(attr(match[0], 'aya')) }))
+const partition = (tagName) => [...metadataText.matchAll(new RegExp(`<${tagName}[^>]*>`, 'gi'))].map(match => ({ index: Number(attr(match[0], 'index')), surah: Number(attr(match[0], 'sura')), ayah: Number(attr(match[0], 'aya')) })).filter(item => Number.isInteger(item.index) && item.index > 0 && Number.isInteger(item.surah) && item.surah > 0 && Number.isInteger(item.ayah) && item.ayah > 0)
 const juz = partition('juz')
 const pages = partition('page')
 if (juz.length !== 30 || pages.length !== 604) fail(`expected 30 juz and 604 pages in Tanzil metadata; found ${juz.length} juz and ${pages.length} pages`)
