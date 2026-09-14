@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/fetch-tanzil-quran.mjs && vite",
+    "dev": "vite",
+    "pretest": "node scripts/fetch-tanzil-quran.mjs",
     "typecheck": "tsc -b --pretty false",
     "build": "node scripts/fetch-tanzil-quran.mjs && npm run typecheck && vite build",
     "preview": "vite preview",
