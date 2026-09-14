@@ -1,0 +1,4 @@
+@supports(padding:max(0px)){.app{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}}
+@supports(padding:env(safe-area-inset-top)){.topbar{padding-top:env(safe-area-inset-top);min-height:72px;height:auto}.bottom-nav{padding-bottom:env(safe-area-inset-bottom);height:calc(72px + env(safe-area-inset-bottom))}.app{padding-bottom:calc(78px + env(safe-area-inset-bottom))}}
+button,input,select{min-height:44px}button{touch-action:manipulation}.offline-banner{z-index:20}.manual,.settings-form{max-width:100%}.file-button{min-height:44px}
+@media(max-width:480px){.page{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}.next-card{gap:12px}.countdown{flex:0 0 auto}.controls{width:100%}.controls input:last-child{max-width:100px}}
