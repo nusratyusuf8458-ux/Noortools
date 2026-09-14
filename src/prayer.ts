@@ -63,15 +63,14 @@ function asr(date: CalendarDate, lat: number, lon: number, shadowRatio: number) 
 }
 
 function toLocalInstant(date: CalendarDate, timeZone: string, localHourValue: number) {
-  let hourValue = localHourValue
-  while (hourValue < 0) hourValue += 24
-  while (hourValue >= 24) hourValue -= 24
-  const hour = Math.floor(hourValue)
-  const minuteFloat = (hourValue - hour) * 60
+  const normalized = ((localHourValue % 24) + 24) % 24
+  const hour = Math.floor(normalized)
+  const minuteFloat = (normalized - hour) * 60
   const minute = Math.floor(minuteFloat)
   const second = Math.round((minuteFloat - minute) * 60)
-  let guess = Date.UTC(date.year, date.month - 1, date.day, hour, minute, second)
-  for (let i = 0; i < 4; i += 1) guess -= timezoneOffsetMinutes(new Date(guess), timeZone) * 60000
+  const base = Date.UTC(date.year, date.month - 1, date.day, hour, minute, second)
+  let guess = base
+  for (let i = 0; i < 4; i += 1) guess = base - timezoneOffsetMinutes(new Date(guess), timeZone) * 60000
   return new Date(guess)
 }
 
@@ -87,8 +86,9 @@ function fallbackIsha(sunset: Date, nextSunrise: Date, method: HighLatitudeMetho
 }
 
 function instantAtLocalNoon(date: CalendarDate, timeZone: string) {
-  let guess = Date.UTC(date.year, date.month - 1, date.day, 12)
-  for (let i = 0; i < 4; i += 1) guess -= timezoneOffsetMinutes(new Date(guess), timeZone) * 60000
+  const base = Date.UTC(date.year, date.month - 1, date.day, 12)
+  let guess = base
+  for (let i = 0; i < 4; i += 1) guess = base - timezoneOffsetMinutes(new Date(guess), timeZone) * 60000
   return new Date(guess)
 }
 
@@ -111,14 +111,7 @@ export function calculatePrayerTimes(date: Date, lat: number, lon: number, timeZ
     if (!resolvedFajr) resolvedFajr = fallbackFajr(sunrise, nightHours, highLatitude, angles.fajr, localDate, timeZone)
     if (!resolvedIsha) resolvedIsha = fallbackIsha(sunset, nextSunrise, highLatitude, angles.isha, localDate, timeZone)
   }
-  const events: [PrayerName, Date | null][] = [
-    ['Fajr', resolvedFajr],
-    ['Sunrise', sunrise],
-    ['Dhuhr', dhuhr],
-    ['Asr', asrTime],
-    ['Maghrib', sunset],
-    ['Isha', resolvedIsha],
-  ]
+  const events: [PrayerName, Date | null][] = [['Fajr', resolvedFajr], ['Sunrise', sunrise], ['Dhuhr', dhuhr], ['Asr', asrTime], ['Maghrib', sunset], ['Isha', resolvedIsha]]
   return events.filter((x): x is [PrayerName, Date] => x[1] instanceof Date && Number.isFinite(x[1].getTime())).map(([name, time]) => ({ name, time }))
 }
 
