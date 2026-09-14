@@ -22,21 +22,22 @@ No major Hadith collection is integrated in Phase 2.3. No Arabic or English Hadi
 
 | Candidate | Edition | Provenance | License / rights finding | Redistribution status | Decision |
 |---|---|---|---|---|---|
-| Marmaduke Pickthall | `The Meaning of the Glorious Koran` (1930) | Project Gutenberg eBook #16955; original 1930 work corroborated by Wikimedia Commons | Project Gutenberg identifies the eBook as public domain in the USA. Wikimedia Commons records the 1930 work as public domain and notes Pickthall died in 1936, placing the work beyond life+70 and life+80 terms used by many jurisdictions. | Public-domain text is suitable for redistribution subject to local-law verification; NoorTools preserves attribution and source URLs anyway. | **CLEARED** for text integration |
-| Tanzil translation collection | Multiple English/other translations | Tanzil | Tanzil says translations are non-commercial only and redistribution of the list is not allowed without direct permission. | Not cleared for NoorTools redistribution. | **BLOCKED** |
+| Marmaduke Pickthall | `The Meaning of the Glorious Koran` (1930) | Project Gutenberg eBook #16955 | Project Gutenberg identifies the eBook as public domain in the USA. The raw Gutenberg transcription is missing four Pickthall ayah records. | Public-domain underlying work; source is suitable for redistribution subject to local-law verification. | **CLEARED** as a source, with completeness limitation handled by a separately audited scan |
+| Marmaduke Pickthall scan fallback | `The Meaning Of The Glorious Koran` (1930) | Internet Archive item `in.ernet.dli.2015.216140`, source from Salar Jung Museum / Digital Library of India; FULL TEXT export | Wikimedia Commons identifies the same 1930 work as public domain; Internet Archive preserves the scan/full-text export. NoorTools uses this source only for the four ayahs omitted by the Gutenberg transcription, with a source-level SHA-256 recorded at import. | Public-domain underlying work; item-level provenance retained. | **CLEARED** for the four fallback records |
+| Tanzil translation collection | Multiple English/other translations | Tanzil | Tanzil says translations are non-commercial only and redistribution of the list into another website is not allowed without direct permission. | Not cleared for NoorTools redistribution. | **BLOCKED** |
 | Quran Foundation API translations | Multiple translations | Official Quran Foundation API | Developer terms permit display of QF Content inside an application but prohibit selling, sublicensing, or redistributing QF Content/raw API data without a separate written commercial license. | Runtime display may be possible under API terms; bundling/redistribution is not cleared. | **BLOCKED** for offline bundling |
 | The Clear Quran | Dr. Mustafa Khattab | Official publisher | Official app/publisher materials identify copyright and authorized publishers; no open redistribution license was found. | No blanket redistribution permission established. | **BLOCKED** |
 
 ### Translation conclusion
 
-Phase 2.3 integrates only Pickthall 1930, sourced from the public-domain work via Project Gutenberg's eBook #16955. It is represented as a separate translation edition and is never treated as part of the Tanzil Arabic record itself.
+Phase 2.3 integrates the complete Pickthall 1930 edition by combining 6,232 Pickthall records from Project Gutenberg with exactly four missing records from the same public-domain 1930 edition preserved by Internet Archive. The four fallback records are not AI-generated or invented; they retain their separate source metadata and source hash. No other translation is bundled.
 
 ## C. Quran audio
 
 | Candidate | Provider / reciter | Provenance | License / rights finding | Redistribution status | Decision |
 |---|---|---|---|---|---|
 | Quran Foundation / quran.com recitations | Multiple reciters | Official Quran Foundation API/documentation | QF terms allow app display of QF Content but prohibit redistribution of raw QF Content without a separate written license; QF notes recitation rights can belong to third parties. | Streaming/bundling rights not proven for the specific recording set. | **BLOCKED** for Phase 2.3 |
-| EveryAyah | Multiple reciters | EveryAyah streaming site | No current primary licensing grant sufficiently establishing NoorTools redistribution of recordings was found during this audit. | Not proven. | **BLOCKED** |
+| EveryAyah | Multiple reciters | EveryAyah streaming site | No current primary licensing grant sufficiently establishing redistribution of recordings was found during this audit. | Not proven. | **BLOCKED** |
 | Third-party mirrors/CDNs | Multiple reciters | Community-hosted copies | Accessibility does not establish recording rights. | Unknown. | **BLOCKED** |
 
 ### Audio conclusion
@@ -68,6 +69,8 @@ No fake reviewer name, credential, or date is created.
 - OpenITI documentation: https://openiti.org/documentation/
 - Project Gutenberg eBook #16955: https://www.gutenberg.org/ebooks/16955
 - Project Gutenberg text source: https://www.gutenberg.org/ebooks/16955.txt.utf-8
+- Internet Archive scan/item: https://archive.org/details/in.ernet.dli.2015.216140
+- Internet Archive full-text export: https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt
 - Wikimedia Commons 1930 Pickthall public-domain record: https://commons.wikimedia.org/wiki/File:The_Meaning_of_the_Glorious_Koran_(1930).pdf
 - Tanzil translations terms: https://tanzil.net/trans/
 - Quran Foundation Developer Terms: https://api-docs.quran.com/legal/developer-terms/
