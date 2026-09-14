@@ -1,0 +1,1 @@
+Phase 2.1 work is developed on the `phase-2.1` branch. The Quran importer downloads Tanzil Uthmani v1.1 directly during the content build, preserves source bytes, validates 114 surahs / 6,236 ayahs, and records source and hash metadata. No translation, Hadith, Dua, Azkar or Names dataset is imported until source licensing and content verification are separately established.
