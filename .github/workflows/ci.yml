@@ -2,9 +2,9 @@ name: NoorTools CI
 
 on:
   push:
-    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3]
+    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3, phase-3b]
   pull_request:
-    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3]
+    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3, phase-3b]
 
 permissions:
   contents: read
