@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const GUTENBERG_URL = 'https://www.gutenberg.org/ebooks/16955.txt.utf-8'
 const GUTENBERG_PAGE = 'https://www.gutenberg.org/ebooks/16955'
@@ -48,7 +48,9 @@ const MISSING_FROM_GUTENBERG = new Map([
   ['56:26', 'No idle talk, no cause of sin,'],
 ])
 
-const TOTAL_VERSES = [7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 18, 15, 15, 15, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 6]
+const tanzilManifest = JSON.parse(await readFile('public/content/quran-manifest.json', 'utf8'))
+const surahCounts = tanzilManifest.surahCounts
+if (!Array.isArray(surahCounts) || surahCounts.length !== 114 || surahCounts.reduce((sum, count) => sum + count, 0) !== 6236) throw new Error('Verified Tanzil manifest does not contain the expected 114-surah/6236-ayah partition.')
 
 const response = await fetch(GUTENBERG_URL)
 if (!response.ok) throw new Error(`Pickthall Gutenberg source download failed: HTTP ${response.status}`)
@@ -67,7 +69,7 @@ for (const phrase of ['slay not the life', 'Creator of the heavens and the earth
 }
 
 const expectedKeys = []
-for (let surah = 1; surah <= 114; surah += 1) for (let ayah = 1; ayah <= TOTAL_VERSES[surah - 1]; ayah += 1) expectedKeys.push(`${surah}:${ayah}`)
+for (let surah = 1; surah <= 114; surah += 1) for (let ayah = 1; ayah <= surahCounts[surah - 1]; ayah += 1) expectedKeys.push(`${surah}:${ayah}`)
 const gutenbergMap = new Map(gutenbergItems.map(item => [`${item.surah}:${item.ayah}`, item.text]))
 const sources = {
   gutenberg: { id: 'quran-translation.pickthall.1930.gutenberg', name: 'Project Gutenberg eBook #16955', version: 'Updated 2020-12-12', sourceURL: GUTENBERG_URL, license: 'Public domain work', licenseURL: GUTENBERG_PAGE, copyrightHolder: 'Marmaduke William Pickthall (1875-1936), original 1930 work', attribution: 'Translator: Marmaduke William Pickthall; Project Gutenberg eBook #16955', redistributionStatus: 'cleared', modificationStatus: 'permitted', commercialUseStatus: 'permitted', contentHash: gutenbergHash, verificationStatus: 'verified', reviewStatus: 'pending_scholar_review' },
