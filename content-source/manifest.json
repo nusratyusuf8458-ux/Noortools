@@ -1,0 +1,72 @@
+{
+  "schema": "noortools.content-source-manifest",
+  "version": 1,
+  "sources": [
+    {
+      "id": "quran.tanzil.uthmani.1.1",
+      "type": "quran_ayah",
+      "source": "Tanzil Project",
+      "edition": "Uthmani",
+      "version": "1.1",
+      "license": "Creative Commons Attribution 3.0; verbatim/no-modification terms",
+      "sourceUrl": "https://tanzil.net/download/",
+      "expectedAyahs": 6236,
+      "expectedSurahs": 114,
+      "verificationStatus": "unavailable",
+      "reviewerStatus": "not_reviewed",
+      "rawFile": "quran-uthmani.txt",
+      "integrityReport": "quran-integrity-report.json"
+    },
+    {
+      "id": "quran.foundation.content-api",
+      "type": "provider",
+      "source": "Quran Foundation",
+      "version": "Content API v4",
+      "license": "Quran Foundation Developer Terms + source-specific content terms",
+      "sourceUrl": "https://api-docs.quran.com/",
+      "verificationStatus": "unavailable",
+      "reviewerStatus": "not_reviewed",
+      "note": "Use through an approved authenticated provider/backend; do not bundle or expose client secrets."
+    },
+    {
+      "id": "names-of-allah.pending",
+      "type": "allah_name",
+      "source": "Not connected",
+      "version": "pending",
+      "license": "pending source permission",
+      "sourceUrl": "",
+      "verificationStatus": "unavailable",
+      "reviewerStatus": "not_reviewed"
+    },
+    {
+      "id": "duas.pending",
+      "type": "dua",
+      "source": "Not connected",
+      "version": "pending",
+      "license": "pending source permission",
+      "sourceUrl": "",
+      "verificationStatus": "unavailable",
+      "reviewerStatus": "not_reviewed"
+    },
+    {
+      "id": "azkar.pending",
+      "type": "azkar",
+      "source": "Not connected",
+      "version": "pending",
+      "license": "pending source permission",
+      "sourceUrl": "",
+      "verificationStatus": "unavailable",
+      "reviewerStatus": "not_reviewed"
+    },
+    {
+      "id": "hadith.pending",
+      "type": "hadith",
+      "source": "Not connected",
+      "version": "pending",
+      "license": "pending source permission",
+      "sourceUrl": "",
+      "verificationStatus": "unavailable",
+      "reviewerStatus": "not_reviewed"
+    }
+  ]
+}
