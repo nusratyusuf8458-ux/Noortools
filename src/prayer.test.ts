@@ -26,10 +26,10 @@ describe('prayer engine', () => {
     const isha = prayers.find(p => p.name === 'Isha')!
     const late = new Date(isha.time.getTime() + 60_000)
     const next = nextPrayer(prayers, 19.076, 72.8777, late)
-    expect(next).not.toBeNull()
-    expect(next?.name).toBe('Fajr')
-    expect(next?.time.getTime()).toBeGreaterThan(late.getTime())
-    expect(next?.time.getTime() - late.getTime()).toBeLessThan(36 * 60 * 60 * 1000)
+    if (!next) throw new Error('Expected tomorrow Fajr')
+    expect(next.name).toBe('Fajr')
+    expect(next.time.getTime()).toBeGreaterThan(late.getTime())
+    expect(next.time.getTime() - late.getTime()).toBeLessThan(36 * 60 * 60 * 1000)
   })
   it('returns valid Date objects without hard-coded prayer times', () => {
     const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
