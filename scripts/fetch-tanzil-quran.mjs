@@ -6,6 +6,7 @@ const METADATA_URL = 'https://tanzil.net/res/text/metadata/quran-data.xml'
 const OUT_DIR = 'public/content'
 
 function fail(message) { throw new Error(`Tanzil import failed: ${message}`) }
+function attr(tag, name) { return tag.match(new RegExp(`${name}="([^"]*)"`))?.[1] ?? '' }
 
 const [quranResponse, metadataResponse] = await Promise.all([
   fetch(QURAN_URL, { headers: { 'user-agent': 'NoorTools/phase-2.1 content importer' } }),
@@ -16,6 +17,8 @@ if (!metadataResponse.ok) fail(`metadata HTTP ${metadataResponse.status}`)
 
 const quranBytes = Buffer.from(await quranResponse.arrayBuffer())
 const quranText = quranBytes.toString('utf8').replace(/^\uFEFF/, '')
+if (!quranText.includes('Tanzil Quran Text') || !quranText.includes('Creative Commons Attribution 3.0')) fail('download is missing the required Tanzil copyright/license notice')
+
 const lines = quranText.split(/\r?\n/)
 const ayahs = []
 const seen = new Set()
@@ -43,12 +46,20 @@ for (const item of ayahs) {
 if (surahCounts.some(count => count === 0)) fail('one or more surahs are missing')
 
 const metadataText = await metadataResponse.text()
-const surahs = []
-const suraRe = /<sura\s+index="(\d+)"\s+name="([^"]+)"/g
-let match
-while ((match = suraRe.exec(metadataText))) surahs.push({ number: Number(match[1]), nameArabic: match[2] })
-if (surahs.length !== 114 || surahs.some((item, index) => item.number !== index + 1)) fail(`metadata does not contain an ordered set of 114 surahs`)
-for (const item of surahs) item.ayahCount = surahCounts[item.number - 1]
+const suras = []
+for (const match of metadataText.matchAll(/<sura\b[^>]*\/?>(?:<\/sura>)?/g)) {
+  const tag = match[0]
+  const number = Number(attr(tag, 'index'))
+  if (!Number.isInteger(number) || number < 1 || number > 114) continue
+  suras.push({ number, nameArabic: attr(tag, 'name'), nameTransliteration: attr(tag, 'tname'), nameEnglish: attr(tag, 'ename'), ayahCount: Number(attr(tag, 'ayas')) })
+}
+if (suras.length !== 114 || suras.some((item, index) => item.number !== index + 1)) fail('metadata does not contain an ordered set of 114 surahs')
+for (const item of suras) if (item.ayahCount !== surahCounts[item.number - 1]) fail(`metadata ayah count mismatch for surah ${item.number}`)
+
+const partition = (tagName) => [...metadataText.matchAll(new RegExp(`<${tagName}\\b[^>]*>`, 'g'))].map(match => ({ index: Number(attr(match[0], 'index')), surah: Number(attr(match[0], 'sura')), ayah: Number(attr(match[0], 'aya')) }))
+const juz = partition('juz')
+const pages = partition('page')
+if (juz.length !== 30 || pages.length !== 604) fail(`expected 30 juz and 604 pages in Tanzil metadata; found ${juz.length} juz and ${pages.length} pages`)
 
 const sha256 = createHash('sha256').update(quranBytes).digest('hex')
 const source = {
@@ -56,7 +67,7 @@ const source = {
   sourceName: 'Tanzil Project',
   sourceVersion: '1.1',
   edition: 'Uthmani',
-  license: 'Creative Commons Attribution 3.0',
+  license: 'Creative Commons Attribution 3.0; verbatim copying only; changing the text is not allowed',
   licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
   sourceUrl: QURAN_URL,
   attributionUrl: 'https://tanzil.net',
@@ -74,6 +85,6 @@ const source = {
 await mkdir(OUT_DIR, { recursive: true })
 await writeFile(`${OUT_DIR}/quran-uthmani-v1.1.txt`, quranBytes)
 await writeFile(`${OUT_DIR}/quran-uthmani-v1.1.json`, JSON.stringify({ source, ayahs }, null, 2))
-await writeFile(`${OUT_DIR}/quran-metadata.json`, JSON.stringify({ source: { sourceId: 'tanzil-quran-metadata', sourceName: 'Tanzil Project', sourceVersion: '1.0', edition: 'Quran Metadata', sourceUrl: METADATA_URL }, surahs }, null, 2))
-await writeFile(`${OUT_DIR}/quran-manifest.json`, JSON.stringify({ dataset: 'quran', datasetVersion: '1.0.0', source, sourceDownloadUrl: QURAN_URL, metadataDownloadUrl: METADATA_URL, byteLength: quranBytes.length, surahCount: 114, ayahCount: 6236, surahCounts, canonicalStorage: 'verbatim source Arabic strings; no normalization or content edits', changeNotes: 'Initial NoorTools Tanzil Uthmani v1.1 integration.' }, null, 2))
-console.log(`Tanzil Uthmani v1.1: 114 surahs / 6236 ayahs / ${quranBytes.length} bytes / sha256=${sha256}`)
+await writeFile(`${OUT_DIR}/quran-metadata.json`, JSON.stringify({ source: { sourceId: 'tanzil-quran-metadata', sourceName: 'Tanzil Project', sourceVersion: '1.0', edition: 'Quran Metadata', license: 'Creative Commons Attribution 3.0', sourceUrl: METADATA_URL }, surahs, juz, pages }, null, 2))
+await writeFile(`${OUT_DIR}/quran-manifest.json`, JSON.stringify({ dataset: 'quran', datasetVersion: '1.0.0', source, sourceDownloadUrl: QURAN_URL, metadataDownloadUrl: METADATA_URL, byteLength: quranBytes.length, surahCount: 114, ayahCount: 6236, surahCounts, juzCount: 30, pageCount: 604, canonicalStorage: 'verbatim source Arabic strings; no normalization or content edits', changeNotes: 'Initial NoorTools Tanzil Uthmani v1.1 integration.' }, null, 2))
+console.log(`Tanzil Uthmani v1.1: 114 surahs / 6236 ayahs / 30 juz / 604 pages / ${quranBytes.length} bytes / sha256=${sha256}`)
