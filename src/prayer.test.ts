@@ -3,10 +3,6 @@ import { calculatePrayerTimes, currentPrayer, nextPrayer, qiblaBearing } from '.
 
 const indiaDate = new Date('2026-09-14T12:00:00Z')
 
-function times(prayers: ReturnType<typeof calculatePrayerTimes>) {
-  return Object.fromEntries(prayers.map(p => [p.name, p.time.getTime()]))
-}
-
 describe('prayer engine', () => {
   it('returns the six core solar events in chronological order for India', () => {
     const prayers = calculatePrayerTimes(indiaDate, 19.076, 72.8777, 'Asia/Kolkata')
@@ -18,10 +14,10 @@ describe('prayer engine', () => {
     const instant = new Date('2026-09-14T23:30:00Z')
     const india = calculatePrayerTimes(instant, 19.076, 72.8777, 'Asia/Kolkata')
     const newYork = calculatePrayerTimes(instant, 40.7128, -74.006, 'America/New_York')
-    const indiaDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(india[0]!.time)
-    const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', dateStyle: 'short' }).format(newYork[0]!.time)
-    expect(indiaDate).toBe('09/15/2026')
-    expect(nyDate).toBe('09/14/2026')
+    const indiaDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(india[0]!.time)
+    const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(newYork[0]!.time)
+    expect(indiaDate).toBe('2026-09-15')
+    expect(nyDate).toBe('2026-09-14')
   })
 
   it('identifies the current prayer window', () => {
@@ -36,10 +32,10 @@ describe('prayer engine', () => {
     const next = nextPrayer(prayers, 19.076, 72.8777, 'Asia/Kolkata', {}, late)
     expect(next?.name).toBe('Fajr')
     expect(next?.time.getTime()).toBeGreaterThan(late.getTime())
-    const localTomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(next!.time)
-    const localLate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(late)
-    expect(localTomorrow).toBe('09/15/2026')
-    expect(localLate).toBe('09/14/2026')
+    const localTomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(next!.time)
+    const localLate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(late)
+    expect(localTomorrow).toBe('2026-09-15')
+    expect(localLate).toBe('2026-09-14')
   })
 
   it('respects DST in a location timezone', () => {
@@ -56,8 +52,14 @@ describe('prayer engine', () => {
     const raw = calculatePrayerTimes(date, 64.1466, -21.9426, 'Atlantic/Reykjavik', { highLatitude: 'none' })
     const fallback = calculatePrayerTimes(date, 64.1466, -21.9426, 'Atlantic/Reykjavik', { highLatitude: 'oneSeventh' })
     expect(fallback.length).toBeGreaterThanOrEqual(raw.length)
-    expect(fallback.find(p => p.name === 'Fajr')?.time.getTime()).toBeLessThan(fallback.find(p => p.name === 'Sunrise')?.time.getTime() ?? Infinity)
-    expect(fallback.find(p => p.name === 'Isha')?.time.getTime()).toBeGreaterThan(fallback.find(p => p.name === 'Maghrib')?.time.getTime() ?? 0)
+    const fajr = fallback.find(p => p.name === 'Fajr')
+    const sunrise = fallback.find(p => p.name === 'Sunrise')
+    const isha = fallback.find(p => p.name === 'Isha')
+    const maghrib = fallback.find(p => p.name === 'Maghrib')
+    expect(fajr).toBeDefined()
+    expect(isha).toBeDefined()
+    expect(fajr!.time.getTime()).toBeLessThan(sunrise!.time.getTime())
+    expect(isha!.time.getTime()).toBeGreaterThan(maghrib!.time.getTime())
   })
 
   it('keeps a graceful unavailable state when polar sunrise/sunset boundaries do not exist', () => {
@@ -75,7 +77,7 @@ describe('prayer engine', () => {
   })
 
   it('has no hard-coded clock values and produces valid Dates', () => {
-    const values = times(calculatePrayerTimes(indiaDate, 19.076, 72.8777, 'Asia/Kolkata'))
-    expect(Object.values(values).every(Number.isFinite)).toBe(true)
+    const prayers = calculatePrayerTimes(indiaDate, 19.076, 72.8777, 'Asia/Kolkata')
+    expect(prayers.every(p => Number.isFinite(p.time.getTime()))).toBe(true)
   })
 })
