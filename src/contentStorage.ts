@@ -1,20 +1,72 @@
 import type { ContentType } from './content'
 
 export type Bookmark = { id: string; type: ContentType; addedAt: string }
-export type QuranReadingProgress = { lastReadId: string | null; positions: Record<string, { ayah: number; updatedAt: string }> }
+export type QuranReadingHistoryEntry = { id: string; surah: number; ayah: number; at: string }
+export type QuranReadingProgress = {
+  lastReadId: string | null
+  positions: Record<string, { ayah: number; updatedAt: string }>
+  readAyahs: Record<string, string>
+  history: QuranReadingHistoryEntry[]
+  activityDates: Record<string, number>
+}
 export type AzkarDay = Record<string, number>
+export type Note = { id: string; contentType: Exclude<ContentType, 'hadith' | 'quran_ayah'> | 'quran_ayah'; contentId: string; text: string; createdAt: string; updatedAt: string }
+export type ReminderKey = 'prayer' | 'morningAzkar' | 'eveningAzkar' | 'quranReading' | 'tasbih'
+export type ReminderSetting = { enabled: boolean; time: string }
+export type ReminderPreferences = { notificationsEnabled: boolean; permission: 'default' | 'granted' | 'denied' | 'unsupported'; items: Record<ReminderKey, ReminderSetting> }
 export type ContentUserState = {
-  version: 2
+  version: 3
   bookmarks: Record<string, Bookmark>
   quran: QuranReadingProgress
   itemProgress: Record<string, { completed: number; target: number; updatedAt: string }>
   azkarDaily: Record<string, AzkarDay>
+  notes: Record<string, Note>
+  reminders: ReminderPreferences
 }
-const KEY = 'noortools:content:v2'
-const LEGACY_KEY = 'noortools:content:v1'
-const EMPTY: ContentUserState = { version: 2, bookmarks: {}, quran: { lastReadId: null, positions: {} }, itemProgress: {}, azkarDaily: {} }
+const KEY = 'noortools:content:v3'
+const LEGACY_KEYS = ['noortools:content:v2', 'noortools:content:v1'] as const
+const EMPTY_REMINDERS: ReminderPreferences = {
+  notificationsEnabled: false,
+  permission: typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+  items: {
+    prayer: { enabled: false, time: '05:00' }, morningAzkar: { enabled: false, time: '07:00' }, eveningAzkar: { enabled: false, time: '18:00' }, quranReading: { enabled: false, time: '21:00' }, tasbih: { enabled: false, time: '20:00' },
+  },
+}
+const EMPTY: ContentUserState = {
+  version: 3, bookmarks: {},
+  quran: { lastReadId: null, positions: {}, readAyahs: {}, history: [], activityDates: {} },
+  itemProgress: {}, azkarDaily: {}, notes: {}, reminders: EMPTY_REMINDERS,
+}
 function cloneEmpty(): ContentUserState { return structuredClone(EMPTY) }
 function isObject(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
+function validTime(value: unknown, fallback: string): string { return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : fallback }
+function notificationPermission(): ReminderPreferences['permission'] { return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission }
+function validReminders(value: unknown): ReminderPreferences {
+  const source = isObject(value) ? value : {}
+  const rawItems = isObject(source.items) ? source.items : {}
+  const fallback = cloneEmpty().reminders
+  const item = (key: ReminderKey) => {
+    const raw = isObject(rawItems[key]) ? rawItems[key] : {}
+    const base = fallback.items[key]
+    return { enabled: raw.enabled === true, time: validTime(raw.time, base.time) }
+  }
+  return {
+    notificationsEnabled: source.notificationsEnabled === true,
+    permission: source.permission === 'granted' || source.permission === 'denied' || source.permission === 'unsupported' ? source.permission : notificationPermission(),
+    items: { prayer: item('prayer'), morningAzkar: item('morningAzkar'), eveningAzkar: item('eveningAzkar'), quranReading: item('quranReading'), tasbih: item('tasbih') },
+  }
+}
+function validNotes(value: unknown): Record<string, Note> {
+  if (!isObject(value)) return {}
+  const result: Record<string, Note> = {}
+  for (const [id, raw] of Object.entries(value)) {
+    if (!isObject(raw) || raw.id !== id || typeof raw.contentId !== 'string' || !raw.contentId.trim() || typeof raw.text !== 'string' || typeof raw.createdAt !== 'string' || typeof raw.updatedAt !== 'string') continue
+    if (raw.contentType !== 'quran_ayah' && raw.contentType !== 'allah_name' && raw.contentType !== 'dua' && raw.contentType !== 'azkar') continue
+    if (!raw.text.trim()) continue
+    result[id] = { id, contentType: raw.contentType, contentId: raw.contentId, text: raw.text.trim().slice(0, 5000), createdAt: raw.createdAt, updatedAt: raw.updatedAt }
+  }
+  return result
+}
 function migrate(value: unknown): ContentUserState {
   if (!isObject(value)) return cloneEmpty()
   const bookmarks: Record<string, Bookmark> = {}
@@ -26,6 +78,14 @@ function migrate(value: unknown): ContentUserState {
   const quranSource = isObject(value.quran) ? value.quran : {}
   const positions: QuranReadingProgress['positions'] = {}
   if (isObject(quranSource.positions)) for (const [surahId, raw] of Object.entries(quranSource.positions)) if (isObject(raw) && Number.isInteger(raw.ayah) && Number(raw.ayah) > 0 && typeof raw.updatedAt === 'string') positions[surahId] = { ayah: Number(raw.ayah), updatedAt: raw.updatedAt }
+  const readAyahs: Record<string, string> = {}
+  if (isObject(quranSource.readAyahs)) for (const [id, at] of Object.entries(quranSource.readAyahs)) if (typeof at === 'string' && /^quran:\d+:\d+$/.test(id)) readAyahs[id] = at
+  const history: QuranReadingHistoryEntry[] = Array.isArray(quranSource.history) ? quranSource.history.flatMap(raw => {
+    if (!isObject(raw) || typeof raw.id !== 'string' || !/^quran:\d+:\d+$/.test(raw.id) || !Number.isInteger(raw.surah) || !Number.isInteger(raw.ayah) || typeof raw.at !== 'string') return []
+    return [{ id: raw.id, surah: Number(raw.surah), ayah: Number(raw.ayah), at: raw.at }]
+  }).slice(-100) : []
+  const activityDates: Record<string, number> = {}
+  if (isObject(quranSource.activityDates)) for (const [date, count] of Object.entries(quranSource.activityDates)) if (/^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isInteger(count) && Number(count) > 0) activityDates[date] = Number(count)
   const itemProgress: ContentUserState['itemProgress'] = {}
   if (isObject(value.itemProgress)) for (const [id, raw] of Object.entries(value.itemProgress)) if (isObject(raw)) {
     const completed = Number(raw.completed); const target = Number(raw.target)
@@ -37,18 +97,41 @@ function migrate(value: unknown): ContentUserState {
     for (const [id, count] of Object.entries(rawDay)) if (Number.isInteger(count) && Number(count) > 0) day[id] = Number(count)
     if (Object.keys(day).length) azkarDaily[date] = day
   }
-  return { version: 2, bookmarks, quran: { lastReadId: typeof quranSource.lastReadId === 'string' ? quranSource.lastReadId : null, positions }, itemProgress, azkarDaily }
+  return { version: 3, bookmarks, quran: {
+    lastReadId: typeof quranSource.lastReadId === 'string' ? quranSource.lastReadId : null,
+    positions, readAyahs, history, activityDates,
+  }, itemProgress, azkarDaily, notes: validNotes(value.notes), reminders: validReminders(value.reminders) }
 }
 export function loadContentState(): ContentUserState {
-  try { const current = localStorage.getItem(KEY); if (current) return migrate(JSON.parse(current)); const legacy = localStorage.getItem(LEGACY_KEY); return legacy ? migrate(JSON.parse(legacy)) : cloneEmpty() } catch { return cloneEmpty() }
+  try { const current = localStorage.getItem(KEY); if (current) return migrate(JSON.parse(current)); for (const key of LEGACY_KEYS) { const legacy = localStorage.getItem(key); if (legacy) return migrate(JSON.parse(legacy)) } } catch { return cloneEmpty() }
+  return cloneEmpty()
 }
-export function saveContentState(state: ContentUserState): void { localStorage.setItem(KEY, JSON.stringify({ ...state, version: 2 })) }
-export function resetContentState(): ContentUserState { localStorage.removeItem(KEY); localStorage.removeItem(LEGACY_KEY); return cloneEmpty() }
-export function toggleBookmark(state: ContentUserState, id: string, type: ContentType, now = new Date()): ContentUserState { const next = structuredClone(state); if (next.bookmarks[id]) delete next.bookmarks[id]; else next.bookmarks[id] = { id, type, addedAt: now.toISOString() }; return next }
-export function recordQuranProgress(state: ContentUserState, surah: number, ayah: number, now = new Date()): ContentUserState { if (!Number.isInteger(surah) || surah < 1 || surah > 114 || !Number.isInteger(ayah) || ayah < 1) return state; const next = structuredClone(state); const id = `quran:${surah}`; next.quran.lastReadId = id; next.quran.positions[id] = { ayah, updatedAt: now.toISOString() }; return next }
+export function saveContentState(state: ContentUserState): void { localStorage.setItem(KEY, JSON.stringify({ ...state, version: 3 })) }
+export function resetContentState(): ContentUserState { localStorage.removeItem(KEY); for (const key of LEGACY_KEYS) localStorage.removeItem(key); return cloneEmpty() }
+export function toggleBookmark(state: ContentUserState, id: string, type: ContentType, now = new Date()): ContentUserState { if (!id.trim()) return state; const next = structuredClone(state); if (next.bookmarks[id]) delete next.bookmarks[id]; else next.bookmarks[id] = { id, type, addedAt: now.toISOString() }; return next }
+export function recordQuranProgress(state: ContentUserState, surah: number, ayah: number, now = new Date(), dateKey = localDateKey(now)): ContentUserState {
+  if (!Number.isInteger(surah) || surah < 1 || surah > 114 || !Number.isInteger(ayah) || ayah < 1) return state
+  const next = structuredClone(state); const id = `quran:${surah}:${ayah}`; const surahId = `quran:${surah}`; const at = now.toISOString()
+  next.quran.lastReadId = id; next.quran.positions[surahId] = { ayah, updatedAt: at }; next.quran.readAyahs[id] = at
+  next.quran.history = [...next.quran.history, { id, surah, ayah, at }].slice(-100)
+  next.quran.activityDates[dateKey] = (next.quran.activityDates[dateKey] ?? 0) + 1
+  return next
+}
 export function setItemProgress(state: ContentUserState, id: string, completed: number, target: number, now = new Date()): ContentUserState { if (!id.trim() || !Number.isInteger(completed) || completed < 0 || !Number.isInteger(target) || target <= 0 || completed > target) return state; const next = structuredClone(state); next.itemProgress[id] = { completed, target, updatedAt: now.toISOString() }; return next }
+export function saveNote(state: ContentUserState, contentId: string, contentType: Note['contentType'], text: string, now = new Date()): ContentUserState { if (!contentId.trim() || !text.trim()) return state; const next = structuredClone(state); const id = `note:${contentType}:${contentId}`; const existing = next.notes[id]; const at = now.toISOString(); next.notes[id] = { id, contentId, contentType, text: text.trim().slice(0, 5000), createdAt: existing?.createdAt ?? at, updatedAt: at }; return next }
+export function deleteNote(state: ContentUserState, contentId: string, contentType: Note['contentType']): ContentUserState { const next = structuredClone(state); delete next.notes[`note:${contentType}:${contentId}`]; return next }
+export function setReminderPreferences(state: ContentUserState, patch: Partial<Pick<ReminderPreferences, 'notificationsEnabled' | 'permission'>> & { item?: Partial<Record<ReminderKey, Partial<ReminderSetting>>> }): ContentUserState {
+  const next = structuredClone(state); const items = next.reminders.items
+  if (typeof patch.notificationsEnabled === 'boolean') next.reminders.notificationsEnabled = patch.notificationsEnabled
+  if (patch.permission) next.reminders.permission = patch.permission
+  if (patch.item) for (const key of Object.keys(patch.item) as ReminderKey[]) { const raw = patch.item[key]; if (!raw) continue; if (typeof raw.enabled === 'boolean') items[key].enabled = raw.enabled; if (raw.time !== undefined) items[key].time = validTime(raw.time, items[key].time) }
+  return next
+}
 export function recordAzkarCount(state: ContentUserState, dateKey: string, id: string, count: number): ContentUserState { if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !id.trim() || !Number.isInteger(count) || count < 0) return state; const next = structuredClone(state); const day = next.azkarDaily[dateKey] ?? {}; if (count === 0) delete day[id]; else day[id] = count; if (Object.keys(day).length === 0) delete next.azkarDaily[dateKey]; else next.azkarDaily[dateKey] = day; return next }
 export function resetAzkarDay(state: ContentUserState, dateKey: string): ContentUserState { if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return state; const next = structuredClone(state); delete next.azkarDaily[dateKey]; return next }
 export function isAzkarCompleted(state: ContentUserState, dateKey: string, id: string, target: number): boolean { return target > 0 && Number(state.azkarDaily[dateKey]?.[id] ?? 0) >= target }
 export function bookmarkCount(state: ContentUserState): number { return Object.keys(state.bookmarks).length }
 export function azkarHistoryDates(state: ContentUserState): string[] { return Object.keys(state.azkarDaily).sort().reverse() }
+export function quranActivityDays(state: ContentUserState): number { return Object.keys(state.quran.activityDates).length }
+export function quranReadCount(state: ContentUserState): number { return Object.keys(state.quran.readAyahs).length }
+export function localDateKey(date = new Date()): string { const y = date.getFullYear(); const m = String(date.getMonth() + 1).padStart(2, '0'); const d = String(date.getDate()).padStart(2, '0'); return `${y}-${m}-${d}` }
