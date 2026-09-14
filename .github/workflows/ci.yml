@@ -1,19 +1,33 @@
 name: NoorTools CI
+
 on:
   push:
     branches: [main, phase-1]
   pull_request:
-    branches: [main]
+    branches: [main, phase-1]
+
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm install
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Lint / static type safety
+        run: npm run lint
+      - name: Vitest
+        run: npm test
+      - name: Production build
+        run: npm run build
