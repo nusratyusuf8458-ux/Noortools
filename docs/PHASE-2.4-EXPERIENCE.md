@@ -1,28 +1,62 @@
 # Phase 2.4 — Islamic Experience Layer
 
 ## Trust boundary
-Phase 2.4 does not add a new religious dataset. Quran Arabic continues to use the existing Tanzil Uthmani v1.1 source foundation. Pickthall remains the only bundled English Quran translation and remains incomplete by design: the four unresolved records are excluded and shown as `Translation unavailable for this record.` No replacement text is generated.
 
-The product does not display a claim that a scholar verified the Phase 2.3 translation. Existing review metadata remains explicit.
+Phase 2.4 adds UX around the verified content foundation only. No new religious dataset is introduced. The canonical Quran Arabic dataset remains the completed Tanzil Uthmani v1.1 foundation; Phase 2.3 Pickthall remains the only bundled Quran translation and its four unresolved records stay unavailable.
 
-## Local-first user data
-Bookmarks, favorites, Quran last-read state, explicit read activity, reading history, notes, Azkar counts and reminder preferences are stored in local storage. No analytics, advertising SDK, tracking, or sync service is introduced by this phase.
+No scholar has reviewed or approved content in NoorTools. The product uses explicit source/review states and does not display a scholar-verified claim.
 
-Rendering an ayah does not create a read event. A read/last-read event is created only from the explicit user action exposed by the Quran reader.
+## Reader
 
-Notes are user-authored data and are visually labeled `USER NOTE`; source text is labeled `SOURCE CONTENT`.
+The Quran reader supports Surah, Juz and page navigation; explicit last-read saving; genuine per-ayah reading activity; reading history; progress; Arabic font size and line-height controls; light/dark reader modes; RTL Arabic rendering; bookmarks/favorites; local notes; copy/share attribution; and explicit unavailable translation states.
+
+Rendering an ayah does not create reading activity. Reading activity is created only by the explicit user action to save/mark that ayah as read.
+
+Search and highlighting are presentation-only. Search normalization may ignore Arabic combining marks and common Alef variants for matching, while the displayed Quran source string is never rewritten.
+
+## Search
+
+Premium search covers only available verified content: Quran Arabic, available Pickthall translation, 99 Names, Duas and Azkar. Results identify the content type and source/review state. Search history is stored locally under a versioned key, capped at 20 entries, sanitized, deduplicated newest-first, and clearable. Search history is never sent to NoorTools servers.
+
+The four excluded Pickthall references remain unavailable and cannot be reconstructed or replaced by another translation.
+
+## Local state
+
+Content user state is version 3. Existing Phase 2.2 content state migrates without inventing bookmarks, progress, notes, or reminders. Favorites are user-controlled. Notes are user-generated and explicitly separated from source content.
 
 ## Daily experience
-Daily Ayah, Daily Dua, Daily Dhikr and Name of the Day use deterministic date-based selection over already available verified content. The selectors are pure and testable; they do not generate religious text.
 
-## Notifications
-The web layer stores permission-aware reminder preferences for Prayer, Morning Azkar, Evening Azkar, Quran reading and Tasbih. It requests browser notification permission only after an explicit user action. This is reminder preference/permission architecture, not a claim of fully tested Android background scheduling.
+Daily Ayah, Dua, Dhikr and Name of the Day are selected deterministically from currently available verified datasets. These selections do not represent user activity and do not add religious content.
+
+## Reminders
+
+Reminder preferences support permission-aware enable/disable controls and local time selection for Prayer, Morning Azkar, Evening Azkar, Quran reading and Tasbih. Browser permission is requested only when the user asks. Background Android delivery is not claimed as tested.
+
+## Privacy
+
+No analytics, advertising SDKs, tracking, or sync service is introduced. User activity, bookmarks, notes, reminder preferences and search history remain local to the device/browser unless an explicitly separate future sync feature is added.
 
 ## Accessibility
-The experience layer adds keyboard-visible focus styling, minimum touch target sizing for major controls, semantic labels for navigation and controls, explicit `dir="rtl"`/Arabic language metadata, forced-colors focus treatment, and reduced-motion behavior. Physical screen-reader and device-matrix validation remain manual QA items.
 
-## Android boundary
-The phase improves responsive/mobile layout, safe-area placement and permission-aware notification behavior. No physical Android device/emulator was available for this implementation pass, so back-stack behavior, Android notification delivery, lifecycle transitions, vibration behavior and device-specific rendering are not certified as physically tested.
+Implemented in code: keyboard-focus styling, usable touch targets, native buttons/inputs, screen-reader labels for interactive search controls, RTL handling for Arabic result presentation, reduced-motion behavior, dark-mode contrast accommodations, and forced-colors focus handling.
 
-## Performance boundary
-Quran reading is scoped to a selected Surah rather than rendering all 6,236 ayahs at once. Search operates on verified in-memory runtime data and caps visible results. Large-scale device performance and physical Android profiling remain manual validation work.
+Physical screen-reader/device-matrix certification is not claimed.
+
+## Android status — NOT PHYSICALLY VERIFIED
+
+The following remain **NOT PHYSICALLY VERIFIED** because no real Android device/emulator test was performed in this phase:
+
+- real Android device behavior
+- physical compass/sensor behavior
+- Android notification delivery
+- vibration behavior
+- Android screen-reader/device matrix
+- Android WebView/browser differences
+
+Web/browser permission boundaries are implemented where possible, but they are not a substitute for physical Android validation.
+
+## Release audit
+
+The final Phase 2.4 review checks for seeded activity, fabricated religious content, fake scholar verification, analytics/tracking SDKs, unauthorized new religious datasets, missing attribution, unsafe localStorage parsing, accidental Quran-source mutation, and fake Android certification claims.
+
+Phase 2.3 source/audit files are not modified by the Phase 2.4 polish work. No new religious data files are introduced by Phase 2.4.
