@@ -1,14 +1,14 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
-import { validateQuranStructure } from './quranData'
+import { validateQuranStructure } from './quranValidation'
 import { loadQuran } from './quranRuntime'
 
 const rawPath = 'public/content/quran-uthmani-v1.1.txt'
 const jsonPath = 'public/content/quran-uthmani-v1.1.json'
 
 describe('integrated Quran dataset', () => {
-  it('contains the real source-derived 114-surah / 6236-ayah structure', () => {
+  it('contains the source-derived 114-surah / 6236-ayah structure', () => {
     const raw = JSON.parse(readFileSync(jsonPath, 'utf8')) as { ayahs: Array<{ id: string; surah: number; ayah: number; arabic: string }> }
     expect(raw.ayahs.length).toBe(6236)
     expect(new Set(raw.ayahs.map(item => item.surah)).size).toBe(114)
@@ -29,6 +29,7 @@ describe('integrated Quran dataset', () => {
     expect(dataset.source.sourceId).toBe('tanzil-uthmani')
     expect(dataset.source.sourceName).toBe('Tanzil Project')
     expect(dataset.source.sourceVersion).toBe('1.1')
+    expect(dataset.source.edition).toBe('Uthmani')
     expect(dataset.source.license).toContain('Creative Commons Attribution 3.0')
     expect(dataset.source.verificationStatus).toBe('verified')
     expect(dataset.source.reviewStatus).toBe('not_reviewed')
