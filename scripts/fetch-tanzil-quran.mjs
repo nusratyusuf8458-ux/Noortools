@@ -46,15 +46,15 @@ for (const item of ayahs) {
 if (surahCounts.some(count => count === 0)) fail('one or more surahs are missing')
 
 const metadataText = await metadataResponse.text()
-const suras = []
+const surahs = []
 for (const match of metadataText.matchAll(/<sura[^>]*>/gi)) {
   const tag = match[0]
   const number = Number(attr(tag, 'index'))
   if (!Number.isInteger(number) || number < 1 || number > 114) continue
-  suras.push({ number, nameArabic: attr(tag, 'name'), nameTransliteration: attr(tag, 'tname'), nameEnglish: attr(tag, 'ename'), ayahCount: Number(attr(tag, 'ayas')) })
+  surahs.push({ number, nameArabic: attr(tag, 'name'), nameTransliteration: attr(tag, 'tname'), nameEnglish: attr(tag, 'ename'), ayahCount: Number(attr(tag, 'ayas')) })
 }
-if (suras.length !== 114 || suras.some((item, index) => item.number !== index + 1)) fail('metadata does not contain an ordered set of 114 surahs')
-for (const item of suras) if (item.ayahCount !== surahCounts[item.number - 1]) fail(`metadata ayah count mismatch for surah ${item.number}`)
+if (surahs.length !== 114 || surahs.some((item, index) => item.number !== index + 1)) fail('metadata does not contain an ordered set of 114 surahs')
+for (const item of surahs) if (item.ayahCount !== surahCounts[item.number - 1]) fail(`metadata ayah count mismatch for surah ${item.number}`)
 
 const partition = (tagName) => [...metadataText.matchAll(new RegExp(`<${tagName}[^>]*>`, 'gi'))].map(match => ({ index: Number(attr(match[0], 'index')), surah: Number(attr(match[0], 'sura')), ayah: Number(attr(match[0], 'aya')) })).filter(item => Number.isInteger(item.index) && item.index > 0 && Number.isInteger(item.surah) && item.surah > 0 && Number.isInteger(item.ayah) && item.ayah > 0)
 const juz = partition('juz')
