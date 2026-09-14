@@ -1,24 +1,21 @@
 import type { ReactNode } from 'react'
+import { normalizeSearchText } from './searchModel'
 
 type HighlightPart = { text: string; match: boolean }
-
-function isCombiningMark(value: string): boolean { return /\p{M}/u.test(value) }
 
 function buildSearchMap(value: string): { searchable: string; starts: number[]; ends: number[] } {
   const starts: number[] = []
   const ends: number[] = []
-  let searchable = ''
+  const searchable = normalizeSearchText(value)
   let originalIndex = 0
+  let normalizedIndex = 0
   for (const char of value) {
     const width = char.length
-    const base = char.normalize('NFKD')
-    if (!isCombiningMark(char)) {
-      const searchableChar = base.replace(/\p{M}/gu, '').toLocaleLowerCase()
-      for (const unit of searchableChar) {
-        searchable += unit
-        starts.push(originalIndex)
-        ends.push(originalIndex + width)
-      }
+    const normalizedChar = normalizeSearchText(char)
+    for (let index = 0; index < normalizedChar.length; index += 1) {
+      starts[normalizedIndex] = originalIndex
+      ends[normalizedIndex] = originalIndex + width
+      normalizedIndex += 1
     }
     originalIndex += width
   }
@@ -26,7 +23,7 @@ function buildSearchMap(value: string): { searchable: string; starts: number[]; 
 }
 
 export function findHighlightRanges(text: string, query: string): Array<[number, number]> {
-  const needle = buildSearchMap(query).searchable.trim()
+  const needle = normalizeSearchText(query.trim())
   if (!text || !needle) return []
   const mapped = buildSearchMap(text)
   const ranges: Array<[number, number]> = []
