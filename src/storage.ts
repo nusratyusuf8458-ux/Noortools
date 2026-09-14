@@ -3,20 +3,24 @@ export type SalahRecord = Partial<Record<SalahName, boolean>>
 export type SalahState = Record<string, SalahRecord>
 export type TasbihSession = { date: string; count: number; target: number; dhikr: string }
 export type LocationState = { lat: number; lon: number; label: string; timeZone: string | null }
+export type HighLatitudeMethod = 'none' | 'angleBased' | 'oneSeventh' | 'middleOfNight'
+export type PrayerSettingsState = { method: 'MWL' | 'ISNA'; hanafi: boolean; highLatitude: HighLatitudeMethod }
 export type AppState = {
   version: 3
   location: LocationState | null
+  prayerSettings: PrayerSettingsState
   salah: SalahState
   tasbih: { count: number; target: number; dhikr: string; sessions: TasbihSession[]; total: number; haptic: boolean; sound: boolean }
 }
 
-type ExportEnvelope = { schema: 'noortools.local-data'; version: number; data: { location: unknown; salah: unknown; tasbih: unknown } }
+type ExportEnvelope = { schema: 'noortools.local-data'; version: number; data: unknown }
 
 const KEY = 'noortools:v3'
 const LEGACY_KEYS = ['noortools:v2', 'noortools:v1'] as const
 const empty: AppState = {
   version: 3,
   location: null,
+  prayerSettings: { method: 'MWL', hanafi: false, highLatitude: 'none' },
   salah: {},
   tasbih: { count: 0, target: 33, dhikr: 'SubhanAllah', sessions: [], total: 0, haptic: true, sound: false },
 }
@@ -58,14 +62,23 @@ function validSessions(value: unknown): TasbihSession[] {
   })
 }
 
+function validPrayerSettings(value: unknown): PrayerSettingsState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return empty.prayerSettings
+  const p = value as Record<string, unknown>
+  const method = p.method === 'ISNA' ? 'ISNA' : 'MWL'
+  const highLatitude = p.highLatitude === 'angleBased' || p.highLatitude === 'oneSeventh' || p.highLatitude === 'middleOfNight' ? p.highLatitude : 'none'
+  return { method, hanafi: p.hanafi === true, highLatitude }
+}
+
 function migrate(raw: unknown): AppState {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return cloneEmpty()
-  const parsed = raw as { version?: unknown; location?: unknown; salah?: unknown; tasbih?: unknown }
+  const parsed = raw as { version?: unknown; location?: unknown; prayerSettings?: unknown; salah?: unknown; tasbih?: unknown }
   if (parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3 && parsed.version !== undefined) return cloneEmpty()
   const t = parsed.tasbih && typeof parsed.tasbih === 'object' && !Array.isArray(parsed.tasbih) ? parsed.tasbih as Record<string, unknown> : {}
   return {
     version: 3,
     location: validLocation(parsed.location),
+    prayerSettings: validPrayerSettings(parsed.prayerSettings),
     salah: validSalah(parsed.salah),
     tasbih: {
       count: nonNegative(t.count, 0),
@@ -109,11 +122,7 @@ export function resetState() {
 }
 
 export function exportData(state: AppState): string {
-  const envelope: ExportEnvelope = {
-    schema: 'noortools.local-data',
-    version: 3,
-    data: { location: state.location, salah: state.salah, tasbih: state.tasbih },
-  }
+  const envelope: ExportEnvelope = { schema: 'noortools.local-data', version: 3, data: { location: state.location, prayerSettings: state.prayerSettings, salah: state.salah, tasbih: state.tasbih } }
   return JSON.stringify(envelope, null, 2)
 }
 
