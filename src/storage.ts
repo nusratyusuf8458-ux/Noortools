@@ -14,27 +14,19 @@ export type AppState = {
 }
 
 type ExportEnvelope = { schema: 'noortools.local-data'; version: number; data: unknown }
-
 const KEY = 'noortools:v3'
 const LEGACY_KEYS = ['noortools:v2', 'noortools:v1'] as const
-const empty: AppState = {
-  version: 3,
-  location: null,
-  prayerSettings: { method: 'MWL', hanafi: false, highLatitude: 'none' },
-  salah: {},
-  tasbih: { count: 0, target: 33, dhikr: 'SubhanAllah', sessions: [], total: 0, haptic: true, sound: false },
-}
-
+const empty: AppState = { version: 3, location: null, prayerSettings: { method: 'MWL', hanafi: false, highLatitude: 'none' }, salah: {}, tasbih: { count: 0, target: 33, dhikr: 'SubhanAllah', sessions: [], total: 0, haptic: true, sound: false } }
 const cloneEmpty = () => structuredClone(empty)
 const nonNegative = (value: unknown, fallback: number) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback
 const positive = (value: unknown, fallback: number) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
 
 function validLocation(value: unknown): LocationState | null {
+  if (value === null) return null
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const v = value as Record<string, unknown>
   const timeZone = typeof v.timeZone === 'string' && v.timeZone.trim() ? v.timeZone : null
-  return typeof v.label === 'string' && typeof v.lat === 'number' && Number.isFinite(v.lat) && Math.abs(v.lat) <= 90 && typeof v.lon === 'number' && Number.isFinite(v.lon) && Math.abs(v.lon) <= 180
-    ? { label: v.label, lat: v.lat, lon: v.lon, timeZone } : null
+  return typeof v.label === 'string' && typeof v.lat === 'number' && Number.isFinite(v.lat) && Math.abs(v.lat) <= 90 && typeof v.lon === 'number' && Number.isFinite(v.lon) && Math.abs(v.lon) <= 180 ? { label: v.label, lat: v.lat, lon: v.lon, timeZone } : null
 }
 
 function validSalah(value: unknown): SalahState {
@@ -65,9 +57,7 @@ function validSessions(value: unknown): TasbihSession[] {
 function validPrayerSettings(value: unknown): PrayerSettingsState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return empty.prayerSettings
   const p = value as Record<string, unknown>
-  const method = p.method === 'ISNA' ? 'ISNA' : 'MWL'
-  const highLatitude = p.highLatitude === 'angleBased' || p.highLatitude === 'oneSeventh' || p.highLatitude === 'middleOfNight' ? p.highLatitude : 'none'
-  return { method, hanafi: p.hanafi === true, highLatitude }
+  return { method: p.method === 'ISNA' ? 'ISNA' : 'MWL', hanafi: p.hanafi === true, highLatitude: p.highLatitude === 'angleBased' || p.highLatitude === 'oneSeventh' || p.highLatitude === 'middleOfNight' ? p.highLatitude : 'none' }
 }
 
 function migrate(raw: unknown): AppState {
@@ -75,21 +65,7 @@ function migrate(raw: unknown): AppState {
   const parsed = raw as { version?: unknown; location?: unknown; prayerSettings?: unknown; salah?: unknown; tasbih?: unknown }
   if (parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3 && parsed.version !== undefined) return cloneEmpty()
   const t = parsed.tasbih && typeof parsed.tasbih === 'object' && !Array.isArray(parsed.tasbih) ? parsed.tasbih as Record<string, unknown> : {}
-  return {
-    version: 3,
-    location: validLocation(parsed.location),
-    prayerSettings: validPrayerSettings(parsed.prayerSettings),
-    salah: validSalah(parsed.salah),
-    tasbih: {
-      count: nonNegative(t.count, 0),
-      target: positive(t.target, 33),
-      dhikr: typeof t.dhikr === 'string' && t.dhikr.trim() ? t.dhikr.trim() : 'SubhanAllah',
-      sessions: validSessions(t.sessions),
-      total: nonNegative(t.total, 0),
-      haptic: typeof t.haptic === 'boolean' ? t.haptic : true,
-      sound: typeof t.sound === 'boolean' ? t.sound : false,
-    },
-  }
+  return { version: 3, location: validLocation(parsed.location), prayerSettings: validPrayerSettings(parsed.prayerSettings), salah: validSalah(parsed.salah), tasbih: { count: nonNegative(t.count, 0), target: positive(t.target, 33), dhikr: typeof t.dhikr === 'string' && t.dhikr.trim() ? t.dhikr.trim() : 'SubhanAllah', sessions: validSessions(t.sessions), total: nonNegative(t.total, 0), haptic: typeof t.haptic === 'boolean' ? t.haptic : true, sound: typeof t.sound === 'boolean' ? t.sound : false } }
 }
 
 export function localDateKey(date = new Date(), timeZone?: string) {
@@ -103,23 +79,13 @@ export function loadState(): AppState {
   try {
     const current = localStorage.getItem(KEY)
     if (current) return migrate(JSON.parse(current))
-    for (const key of LEGACY_KEYS) {
-      const legacy = localStorage.getItem(key)
-      if (legacy) return migrate(JSON.parse(legacy))
-    }
+    for (const key of LEGACY_KEYS) { const legacy = localStorage.getItem(key); if (legacy) return migrate(JSON.parse(legacy)) }
   } catch { return cloneEmpty() }
   return cloneEmpty()
 }
 
-export function saveState(state: AppState) {
-  localStorage.setItem(KEY, JSON.stringify({ ...state, version: 3 }))
-}
-
-export function resetState() {
-  localStorage.removeItem(KEY)
-  for (const key of LEGACY_KEYS) localStorage.removeItem(key)
-  return cloneEmpty()
-}
+export function saveState(state: AppState) { localStorage.setItem(KEY, JSON.stringify({ ...state, version: 3 })) }
+export function resetState() { localStorage.removeItem(KEY); for (const key of LEGACY_KEYS) localStorage.removeItem(key); return cloneEmpty() }
 
 export function exportData(state: AppState): string {
   const envelope: ExportEnvelope = { schema: 'noortools.local-data', version: 3, data: { location: state.location, prayerSettings: state.prayerSettings, salah: state.salah, tasbih: state.tasbih } }
@@ -135,7 +101,12 @@ export function parseImportedData(text: string): AppState {
   if (envelope.schema !== 'noortools.local-data') throw new Error('This file is not a NoorTools local-data export.')
   if (typeof envelope.version !== 'number' || ![1, 2, 3].includes(envelope.version)) throw new Error('Unsupported NoorTools data version.')
   if (!envelope.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)) throw new Error('NoorTools export data is missing.')
-  return migrate({ ...(envelope.data as Record<string, unknown>), version: envelope.version })
+  const source = envelope.data as Record<string, unknown>
+  if (!('location' in source) || !('salah' in source) || !('tasbih' in source)) throw new Error('NoorTools export is structurally incomplete.')
+  if (source.location !== null && validLocation(source.location) === null) throw new Error('Imported location data is invalid.')
+  if (source.salah === null || typeof source.salah !== 'object' || Array.isArray(source.salah)) throw new Error('Imported Salah data is invalid.')
+  if (source.tasbih === null || typeof source.tasbih !== 'object' || Array.isArray(source.tasbih)) throw new Error('Imported Tasbih data is invalid.')
+  return migrate({ ...source, version: envelope.version })
 }
 
 function daysAgo(today: Date, key: string) {
