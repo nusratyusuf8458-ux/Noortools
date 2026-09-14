@@ -12,6 +12,7 @@ export const loadPhase3CState=():Phase3CState=>{try{const raw=localStorage.getIt
 export const savePhase3CState=(state:Phase3CState)=>{localStorage.setItem(KEY,JSON.stringify({...state,version:1}))}
 export const resetPhase3CState=()=>{localStorage.removeItem(KEY);return blank()}
 export const updateTrack=(state:Phase3CState,kind:PilgrimageKind,patch:Partial<PilgrimageTrack>):Phase3CState=>({...state,[kind]:{...state[kind],...patch}})
-export const addChecklist=(state:Phase3CState,label:string,now=new Date()):Phase3CState=>{const clean=cleanString(label,240).trim();if(!clean)throw new Error('Checklist label is required.');return {...state,checklist:[...state.checklist,{id:`item:${now.toISOString()}:${Math.random().toString(36).slice(2,8)}`,label:clean,done:false,createdAt:now.toISOString()}].slice(-200)}}
+const newId=(now:Date)=>`item:${now.toISOString()}:${typeof crypto!=='undefined'&&'randomUUID'in crypto?crypto.randomUUID():now.getTime().toString(36)}`
+export const addChecklist=(state:Phase3CState,label:string,now=new Date()):Phase3CState=>{const clean=cleanString(label,240).trim();if(!clean)throw new Error('Checklist label is required.');return {...state,checklist:[...state.checklist,{id:newId(now),label:clean,done:false,createdAt:now.toISOString()}].slice(-200)}}
 export const toggleChecklist=(state:Phase3CState,id:string):Phase3CState=>({...state,checklist:state.checklist.map(x=>x.id===id?{...x,done:!x.done}:x)})
 export const deleteChecklist=(state:Phase3CState,id:string):Phase3CState=>({...state,checklist:state.checklist.filter(x=>x.id!==id)})
