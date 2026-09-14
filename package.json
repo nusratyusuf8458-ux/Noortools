@@ -4,15 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/fetch-tanzil-quran.mjs && vite",
     "typecheck": "tsc -b --pretty false",
-    "build": "npm run typecheck && vite build",
+    "build": "node scripts/fetch-tanzil-quran.mjs && npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run --environment jsdom",
     "test:watch": "vitest --environment jsdom",
     "lint": "tsc --noEmit --pretty false",
-    "validate:quran": "node scripts/validate-tanzil-quran.mjs",
-    "import:quran": "node scripts/import-tanzil-quran.mjs"
+    "validate:quran": "node scripts/validate-tanzil-quran.mjs"
   },
   "dependencies": {
     "@photostructure/tz-lookup": "^11.6.1",
