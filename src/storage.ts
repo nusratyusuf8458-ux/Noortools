@@ -19,21 +19,14 @@ const empty: AppState = {
 }
 
 const cloneEmpty = () => structuredClone(empty)
-
-function nonNegative(value: unknown, fallback: number) {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback
-}
-
-function positive(value: unknown, fallback: number) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
-}
+const nonNegative = (value: unknown, fallback: number) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback
+const positive = (value: unknown, fallback: number) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
 
 function validLocation(value: unknown): AppState['location'] {
   if (!value || typeof value !== 'object') return null
   const v = value as Record<string, unknown>
   return typeof v.label === 'string' && typeof v.lat === 'number' && Number.isFinite(v.lat) && Math.abs(v.lat) <= 90 && typeof v.lon === 'number' && Number.isFinite(v.lon) && Math.abs(v.lon) <= 180
-    ? { label: v.label, lat: v.lat, lon: v.lon }
-    : null
+    ? { label: v.label, lat: v.lat, lon: v.lon } : null
 }
 
 function validSalah(value: unknown): SalahState {
@@ -63,7 +56,7 @@ function validSessions(value: unknown): TasbihSession[] {
 
 function migrate(raw: unknown): AppState {
   if (!raw || typeof raw !== 'object') return cloneEmpty()
-  const parsed = raw as Partial<AppState> & { version?: unknown; tasbih?: Record<string, unknown> }
+  const parsed = raw as { version?: unknown; location?: unknown; salah?: unknown; tasbih?: Record<string, unknown> }
   if (parsed.version === 2) {
     const result = cloneEmpty()
     result.location = validLocation(parsed.location)
@@ -85,13 +78,7 @@ function migrate(raw: unknown): AppState {
     result.location = validLocation(parsed.location)
     result.salah = validSalah(parsed.salah)
     const t = parsed.tasbih ?? {}
-    result.tasbih = {
-      ...result.tasbih,
-      count: nonNegative(t.count, 0),
-      target: positive(t.target, 33),
-      dhikr: typeof t.dhikr === 'string' && t.dhikr.trim() ? t.dhikr.trim() : 'SubhanAllah',
-      total: nonNegative(t.total, 0),
-    }
+    result.tasbih = { ...result.tasbih, count: nonNegative(t.count, 0), target: positive(t.target, 33), dhikr: typeof t.dhikr === 'string' && t.dhikr.trim() ? t.dhikr.trim() : 'SubhanAllah', total: nonNegative(t.total, 0) }
     return result
   }
   return cloneEmpty()
@@ -108,20 +95,11 @@ export function loadState(): AppState {
     const legacy = localStorage.getItem(LEGACY_KEY)
     if (legacy) return migrate(JSON.parse(legacy))
     return cloneEmpty()
-  } catch {
-    return cloneEmpty()
-  }
+  } catch { return cloneEmpty() }
 }
 
-export function saveState(state: AppState) {
-  localStorage.setItem(KEY, JSON.stringify({ ...state, version: 2 }))
-}
-
-export function resetState() {
-  localStorage.removeItem(KEY)
-  localStorage.removeItem(LEGACY_KEY)
-  return cloneEmpty()
-}
+export function saveState(state: AppState) { localStorage.setItem(KEY, JSON.stringify({ ...state, version: 2 })) }
+export function resetState() { localStorage.removeItem(KEY); localStorage.removeItem(LEGACY_KEY); return cloneEmpty() }
 
 function daysAgo(today: Date, key: string) {
   const d = new Date(`${key}T12:00:00`)
