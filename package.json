@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "pretest": "node scripts/fetch-tanzil-quran.mjs && node scripts/fetch-phase-2-2-content.mjs",
+    "pretest": "node scripts/fetch-tanzil-quran.mjs && node scripts/fetch-phase-2-2-content.mjs && node scripts/fetch-phase-2-3-content.mjs",
     "typecheck": "tsc -b --pretty false",
-    "build": "node scripts/fetch-tanzil-quran.mjs && node scripts/fetch-phase-2-2-content.mjs && npm run typecheck && vite build",
+    "build": "node scripts/fetch-tanzil-quran.mjs && node scripts/fetch-phase-2-2-content.mjs && node scripts/fetch-phase-2-3-content.mjs && npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run --environment jsdom",
     "test:watch": "vitest --environment jsdom",
