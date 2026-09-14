@@ -1,18 +1,23 @@
 export type ContentType = 'quran_ayah' | 'allah_name' | 'dua' | 'azkar' | 'hadith'
 export type VerificationStatus = 'verified' | 'needs_review' | 'unavailable'
+export type ReviewStatus = 'not_reviewed' | 'in_review' | 'reviewed'
 
 export type SourceMetadata = {
+  sourceId: string
   source: string
   reference?: string
   collection?: string
   edition?: string
   version: string
   license: string
+  licenseUrl?: string
   sourceUrl: string
   importedAt?: string
   importVersion?: string
+  contentHash?: string
   verificationStatus: VerificationStatus
-  reviewerStatus?: 'not_reviewed' | 'in_review' | 'reviewed'
+  reviewStatus?: ReviewStatus
+  reviewer?: string
   reviewerNotes?: string
   reviewDate?: string
 }
@@ -24,6 +29,7 @@ export type ReligiousContentItem = {
   translation?: string
   transliteration?: string
   title?: string
+  contentHash?: string
   source: SourceMetadata
 }
 
@@ -45,28 +51,19 @@ export type QuranSurahSlot = {
 export type ContentCategory = 'Quran' | 'Names of Allah' | 'Duas' | 'Morning & Evening Azkar' | 'Hadith'
 
 export const QURAN_SOURCE: SourceMetadata = {
+  sourceId: 'tanzil-uthmani',
   source: 'Tanzil Project',
   edition: 'Uthmani',
   version: '1.1',
-  license: 'Creative Commons Attribution 3.0; text must remain verbatim and attribution retained',
+  license: 'Creative Commons Attribution 3.0; verbatim copying only; no text changes',
+  licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
   sourceUrl: 'https://tanzil.net/download/',
   verificationStatus: 'unavailable',
-  reviewerStatus: 'not_reviewed',
+  reviewStatus: 'not_reviewed',
 }
 
-// Structural slots deliberately contain no Quranic source text. They become readable only after an explicit source import passes validation.
-export const QURAN_SURAH_SLOTS: QuranSurahSlot[] = Array.from({ length: 114 }, (_, index) => ({
-  number: index + 1,
-  available: false,
-}))
-
-export const CONTENT_CATEGORIES: ContentCategory[] = [
-  'Quran',
-  'Names of Allah',
-  'Duas',
-  'Morning & Evening Azkar',
-  'Hadith',
-]
+export const QURAN_SURAH_SLOTS: QuranSurahSlot[] = Array.from({ length: 114 }, (_, index) => ({ number: index + 1, available: false }))
+export const CONTENT_CATEGORIES: ContentCategory[] = ['Quran', 'Names of Allah', 'Duas', 'Morning & Evening Azkar', 'Hadith']
 
 export function isPresentable(item: ReligiousContentItem): boolean {
   return item.source.verificationStatus === 'verified' && Boolean(item.arabic || item.translation || item.title)
@@ -79,7 +76,7 @@ export function contentSourceLabel(source: SourceMetadata): string {
 export function searchVerifiedContent(items: ReligiousContentItem[], query: string): ReligiousContentItem[] {
   const needle = query.trim().toLocaleLowerCase()
   if (!needle) return []
-  return items.filter(item => isPresentable(item)).filter(item => [item.id, item.title, item.arabic, item.translation, item.transliteration, item.source.reference, item.source.collection].filter(Boolean).some(value => value!.toLocaleLowerCase().includes(needle)))
+  return items.filter(isPresentable).filter(item => [item.id, item.title, item.arabic, item.translation, item.transliteration, item.source.reference, item.source.collection].filter(Boolean).some(value => value!.toLocaleLowerCase().includes(needle)))
 }
 
 export function validateQuranItems(items: QuranAyah[]): { valid: boolean; errors: string[] } {
@@ -89,10 +86,9 @@ export function validateQuranItems(items: QuranAyah[]): { valid: boolean; errors
     const key = `${item.surah}:${item.ayah}`
     if (keys.has(key)) errors.push(`Duplicate ayah ${key}.`)
     keys.add(key)
-    const expectedId = `quran:${item.surah}:${item.ayah}`
-    if (item.id !== expectedId) errors.push(`Ayah ${key} has unstable id ${item.id}.`)
+    if (item.id !== `quran:${item.surah}:${item.ayah}`) errors.push(`Ayah ${key} has unstable id ${item.id}.`)
     if (item.source.verificationStatus !== 'verified') errors.push(`Ayah ${key} is not verified.`)
-    if (item.source.source.trim() === '' || item.source.version.trim() === '' || item.source.license.trim() === '' || item.source.sourceUrl.trim() === '') errors.push(`Ayah ${key} is missing source metadata.`)
+    if (!item.source.sourceId || !item.source.source.trim() || !item.source.version.trim() || !item.source.license.trim() || !item.source.sourceUrl.trim()) errors.push(`Ayah ${key} is missing source metadata.`)
     if (!Number.isInteger(item.surah) || item.surah < 1 || item.surah > 114) errors.push(`Ayah ${key} has invalid surah number.`)
     if (!Number.isInteger(item.ayah) || item.ayah < 1) errors.push(`Ayah ${key} has invalid ayah number.`)
   }
