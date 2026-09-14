@@ -8,74 +8,83 @@ This audit is deliberately conservative. A public website, open endpoint, or rep
 
 | Candidate | Collection / edition | Provenance | License / rights finding | Redistribution status | Decision |
 |---|---|---|---|---|---|
-| Sunnah.com | Multiple major collections | Official Sunnah.com API | API access requires an API key; Sunnah.com says an offline dump was not available. No corpus-wide redistribution grant was identified in the public developer material. | Not proven | **BLOCKED** for bundling |
-| fawazahmed0/hadith-api | Bukhari, Muslim, Abu Dawud, Tirmidhi, Nasa'i, Ibn Majah and other editions | GitHub repository, branch `1`, audited commit `df57907be35291c91ad6a6691180e22ca9920784` | Repository `LICENSE` is Unlicense, but repository issues include an explicit open question about the license of the texts. The README also aggregates translations from multiple upstream sources. | Arabic classical text may be public-domain in principle; source/edition and third-party translation rights are not sufficiently proven as a complete redistributable corpus. | **BLOCKED** as a complete Hadith dataset |
-| Jaguar16/open-hadith-data | Structured Hadith corpus | GitHub repository | Code MIT; structured data stated CC0; English translations are sourced from Sunnah.com and explicitly require separate rights review. | Mixed rights; English redistribution unresolved. | **BLOCKED** for bundled religious content |
-| i-muslim downloads | Arabic Hadith collections + some authored translations | First-party i-muslim download/API documentation | i-muslim states classical Arabic Hadith editions are public domain and its own authored translations are CC0; mirrored third-party translations are metadata-only. However, the public page does not provide an immutable repository commit for the assembled Arabic edition files. | Potentially usable for Arabic-only runtime data, but immutable edition provenance is not yet strong enough for this release. | **REQUIRES CLARIFICATION** |
-| OpenITI | Arabic historical text corpus | OpenITI project | CC BY-NC-SA 4.0. Corpus excludes in-copyright editorial matter, but commercial use is restricted by the license. | Not suitable for a generally distributed/commercial app. | **BLOCKED** |
+| Sunnah.com | Multiple major collections | Official Sunnah.com API | API access requires an API key; public developer material does not establish a corpus-wide redistribution grant. | Not proven | **BLOCKED** |
+| fawazahmed0/hadith-api | Multiple major collections | GitHub branch `1`, audited commit `df57907be35291c91ad6a6691180e22ca9920784` | Repository is Unlicense, but the underlying collection and third-party translation rights are not proven as a complete redistributable corpus. | Not proven | **BLOCKED** |
+| Jaguar16/open-hadith-data | Structured Hadith corpus | GitHub repository | Code/data are presented under permissive licenses, but English translations are sourced from Sunnah.com and require separate rights review. | Mixed/uncleared | **BLOCKED** |
+| i-muslim downloads | Classical Arabic Hadith editions | First-party download documentation | Classical Arabic editions may be public domain and the site describes a permissive model, but the exact assembled files lack immutable edition provenance in this audit. | Unknown | **REQUIRES CLARIFICATION** |
+| OpenITI | Arabic historical Hadith/text corpus | OpenITI project | CC BY-NC-SA 4.0; non-commercial restriction prevents use as a generally distributable commercial dataset. | Restricted | **BLOCKED** |
 
-### Hadith conclusion
-
-No major Hadith collection is integrated in Phase 2.3. No Arabic or English Hadith text is copied into NoorTools merely because an API or repository exposes it. The Hadith UI remains an honest unavailable state until a collection-specific edition, numbering, source, and redistribution grant are proven.
+No Hadith text, number, grading, Arabic, or translation is bundled.
 
 ## B. Quran translations
 
-| Candidate | Edition | Provenance | License / rights finding | Redistribution status | Decision |
+| Candidate | Edition | Provenance | Rights finding | Redistribution status | Decision |
 |---|---|---|---|---|---|
-| Marmaduke Pickthall | `The Meaning of the Glorious Koran` (1930) | Project Gutenberg eBook #16955 | Project Gutenberg identifies the eBook as public domain in the USA. The raw Gutenberg transcription is missing four Pickthall ayah records. | Public-domain underlying work; source is suitable for redistribution subject to local-law verification. | **CLEARED** as a source, with completeness limitation handled by a separately audited scan |
-| Marmaduke Pickthall scan fallback | `The Meaning Of The Glorious Koran` (1930) | Internet Archive item `in.ernet.dli.2015.216140`, source from Salar Jung Museum / Digital Library of India; FULL TEXT export | Wikimedia Commons identifies the same 1930 work as public domain; Internet Archive preserves the scan/full-text export. NoorTools uses this source only for the four ayahs omitted by the Gutenberg transcription, with a source-level SHA-256 recorded at import. | Public-domain underlying work; item-level provenance retained. | **CLEARED** for the four fallback records |
-| Tanzil translation collection | Multiple English/other translations | Tanzil | Tanzil says translations are non-commercial only and redistribution of the list into another website is not allowed without direct permission. | Not cleared for NoorTools redistribution. | **BLOCKED** |
-| Quran Foundation API translations | Multiple translations | Official Quran Foundation API | Developer terms permit display of QF Content inside an application but prohibit selling, sublicensing, or redistributing QF Content/raw API data without a separate written commercial license. | Runtime display may be possible under API terms; bundling/redistribution is not cleared. | **BLOCKED** for offline bundling |
-| The Clear Quran | Dr. Mustafa Khattab | Official publisher | Official app/publisher materials identify copyright and authorized publishers; no open redistribution license was found. | No blanket redistribution permission established. | **BLOCKED** |
+| Marmaduke William Pickthall | `The Meaning of the Glorious Koran` (1930) | Project Gutenberg eBook #16955; underlying 1930 work by Pickthall | Project Gutenberg identifies eBook #16955 as public domain in the USA. NoorTools preserves translator/source attribution and does not rewrite the source wording. | Cleared for the verified 6,232-record Gutenberg transcription, subject to applicable local law. | **CLEARED** |
+| Tanzil translation collection | Multiple translations | Tanzil | Translation terms are non-commercial and restrict redistribution to another website without permission. | Not cleared | **BLOCKED** |
+| Quran Foundation Content API translations | Multiple translations | Official QF developer terms | Display in an application is not a blanket raw-content redistribution grant. Separate written permission is required for redistribution. | Not cleared for bundled data | **BLOCKED** |
+| The Clear Quran | Dr. Mustafa Khattab | Official publisher/site | Copyrighted; no open redistribution license established during audit. | Not proven | **BLOCKED** |
 
-### Translation conclusion
+### Pickthall ruthless audit
 
-Phase 2.3 integrates the complete Pickthall 1930 edition by combining 6,232 Pickthall records from Project Gutenberg with exactly four missing records from the same public-domain 1930 edition preserved by Internet Archive. The four fallback records are not AI-generated or invented; they retain their separate source metadata and source hash. No other translation is bundled.
+Canonical Quran numbering was independently checked from the existing verified 114-surah / 6,236-ayah partition. The distributable Pickthall set is now **6,232 exact records**, each with a stable ID of the form `quran-translation:en:pickthall-1930:<surah>:<ayah>` and a per-record SHA-256 of its exact imported text.
+
+The 6,232 distributable records are re-parsed from the exact Project Gutenberg transcription and compared record-by-record during CI. The source hash is checked against a fresh download on every test/build run.
+
+The four canonical IDs absent from the Gutenberg transcription are deliberately **not distributed**:
+
+| Canonical ID | Printed page in audited 1930 scan | Why absent from Gutenberg | Exact source used for audit | Edition / publisher | Digitization | Manual correction | Shipping status |
+|---|---:|---|---|---|---|---|---|
+| `17:33` | 285 | No corresponding record in the Gutenberg transcription. | Internet Archive item `in.ernet.dli.2015.216140`, full-text derivative; scan is the same titled 1930 work. | `The Meaning of the Glorious Koran` (1930), George Allen & Unwin | Physical scan with ABBYY OCR-derived full text | **No correction shipped**; prior fallback rejected after OCR showed a transcription error. | unavailable_pending_verification |
+| `39:46` | 478 | No corresponding record in the Gutenberg transcription. | Same Internet Archive item and OCR full-text derivative. | Same 1930 edition / George Allen & Unwin | Scan + ABBYY OCR-derived full text | **No correction shipped**; prior fallback not treated as source text. | unavailable_pending_verification |
+| `45:32` | 516 | No corresponding record in the Gutenberg transcription. | Same Internet Archive item and OCR full-text derivative. | Same 1930 edition / George Allen & Unwin | Scan + ABBYY OCR-derived full text | **No correction shipped**; OCR wording conflicts with the former hardcoded fallback (`conjecture` vs `opinion`), so fallback was rejected. | unavailable_pending_verification |
+| `56:26` | 562 | No corresponding record in the Gutenberg transcription. | Same Internet Archive item and OCR full-text derivative. | Same 1930 edition / George Allen & Unwin | Scan + ABBYY OCR-derived full text | **No correction shipped**; OCR evidence directly conflicts with the former fallback, which was rejected. | unavailable_pending_verification |
+
+The audited Internet Archive text is an OCR derivative, not a page-image transcription that has been manually normalized by NoorTools. Because OCR errors are demonstrable in the source, its text alone is insufficient to establish the exact distributable wording for the four missing records. Therefore no text from those four records is copied into the distributable translation dataset.
+
+For the four excluded records, `sourceHash` and `recordContentHash` are intentionally `null` in the distributable metadata because no unambiguously verified record text is being shipped. The Internet Archive full-text source itself is preserved as audit evidence only; its audit source hash is not treated as a record text hash.
+
+No Tanzil Arabic text is used to reconstruct English. No AI reconstruction is used. No record is silently merged from a different translation edition.
 
 ## C. Quran audio
 
-| Candidate | Provider / reciter | Provenance | License / rights finding | Redistribution status | Decision |
-|---|---|---|---|---|---|
-| Quran Foundation / quran.com recitations | Multiple reciters | Official Quran Foundation API/documentation | QF terms allow app display of QF Content but prohibit redistribution of raw QF Content without a separate written license; QF notes recitation rights can belong to third parties. | Streaming/bundling rights not proven for the specific recording set. | **BLOCKED** for Phase 2.3 |
-| EveryAyah | Multiple reciters | EveryAyah streaming site | No current primary licensing grant sufficiently establishing redistribution of recordings was found during this audit. | Not proven. | **BLOCKED** |
-| Third-party mirrors/CDNs | Multiple reciters | Community-hosted copies | Accessibility does not establish recording rights. | Unknown. | **BLOCKED** |
+| Candidate | Provider / reciter | Rights finding | Redistribution status | Decision |
+|---|---|---|---|---|
+| Quran Foundation recitations | Multiple reciters | Recording-specific redistribution grant not established; third-party rights may apply. | Not cleared | **BLOCKED** |
+| EveryAyah | Multiple reciters | No sufficiently explicit current redistribution grant for NoorTools established during audit. | Not proven | **BLOCKED** |
+| Third-party mirrors/CDNs | Multiple reciters | Accessibility does not establish recording rights. | Unknown | **BLOCKED** |
 
-### Audio conclusion
+No audio files are bundled or offered for download.
 
-No MP3/audio file is bundled. No reciter is represented as licensed. NoorTools shows an unavailable state rather than offering an unauthorized download or offline player.
+## D. Verification and scholar review
 
-## D. Verification/review policy
-
-`source_verified` means the source/provenance/license metadata was checked. It does not mean a scholar has reviewed the religious text.
+`source_verified` means source/provenance/license metadata has been checked. It does **not** mean a scholar has reviewed the religious content.
 
 Allowed states:
-
 - `source_verified`
 - `pending_scholar_review`
 - `scholar_reviewed`
 - `needs_correction`
 - `unavailable`
 
-No fake reviewer name, credential, or date is created.
+The Pickthall translation remains `pending_scholar_review`. The UI is explicitly written to avoid a generic `Scholar Verified` claim, and the independent audit script fails if that phrase is introduced.
 
-## E. Source URLs and evidence
+## E. Primary source URLs
 
 - Sunnah.com developers: https://sunnah.com/developers
 - fawazahmed0/hadith-api: https://github.com/fawazahmed0/hadith-api/tree/1
 - fawazahmed0 audited commit: `df57907be35291c91ad6a6691180e22ca9920784`
-- fawazahmed0 LICENSE: https://github.com/fawazahmed0/hadith-api/blob/1/LICENSE
 - Jaguar16/open-hadith-data: https://github.com/Jaguar16/open-hadith-data
-- i-muslim downloads/licence model: https://i-muslim.com/id/downloads
+- i-muslim downloads: https://i-muslim.com/id/downloads
 - OpenITI documentation: https://openiti.org/documentation/
 - Project Gutenberg eBook #16955: https://www.gutenberg.org/ebooks/16955
-- Project Gutenberg text source: https://www.gutenberg.org/ebooks/16955.txt.utf-8
-- Internet Archive scan/item: https://archive.org/details/in.ernet.dli.2015.216140
-- Internet Archive full-text export: https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt
-- Wikimedia Commons 1930 Pickthall public-domain record: https://commons.wikimedia.org/wiki/File:The_Meaning_of_the_Glorious_Koran_(1930).pdf
-- Tanzil translations terms: https://tanzil.net/trans/
-- Quran Foundation Developer Terms: https://api-docs.quran.com/legal/developer-terms/
-- The Clear Quran official site: https://theclearquran.org/
+- Project Gutenberg exact text: https://www.gutenberg.org/ebooks/16955.txt.utf-8
+- Internet Archive scan: https://archive.org/details/in.ernet.dli.2015.216140
+- Internet Archive OCR/full-text derivative: https://archive.org/stream/in.ernet.dli.2015.216140/2015.216140.The-Meaning_djvu.txt
+- Tanzil translations: https://tanzil.net/trans/
+- Quran Foundation developer terms: https://api-docs.quran.com/legal/developer-terms/
+- EveryAyah: https://everyayah.com/
 
 ## F. Audit rule
 
-Where the specific dataset/edition/recording cannot be shown to be redistributable, NoorTools leaves it unavailable. No legal conclusion is based solely on another app using the material.
+Where a specific religious dataset, translation edition, or recording cannot be shown to be redistributable and provenance-safe, NoorTools leaves it unavailable. No legal conclusion is based solely on another app using the material.
