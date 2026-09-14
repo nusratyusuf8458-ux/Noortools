@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loadQuranTranslations, type QuranTranslation } from './quranTranslation'
+import { loadQuranTranslations, searchQuranTranslations, toggleTranslationBookmark, type QuranTranslation } from './quranTranslation'
 import { HADITH_UI_STATE } from './hadith'
 import { AUDIO_UI_STATE } from './quranAudio'
 
 const sections = ['translation', 'hadith', 'audio'] as const
 type Section = typeof sections[number]
+
+function safeBookmarks(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem('noortools:phase23:translation-bookmarks') || '[]')
+    return Array.isArray(parsed) && parsed.every(item => typeof item === 'string') ? parsed : []
+  } catch { return [] }
+}
 
 export default function Phase23Launcher() {
   const [open, setOpen] = useState(false)
@@ -12,18 +19,14 @@ export default function Phase23Launcher() {
   const [query, setQuery] = useState('')
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null)
   const [translations, setTranslations] = useState<QuranTranslation[]>([])
-  const [bookmarks, setBookmarks] = useState<string[]>(() => JSON.parse(localStorage.getItem('noortools:phase23:translation-bookmarks') || '[]') as string[])
+  const [bookmarks, setBookmarks] = useState<string[]>(safeBookmarks)
   const [error, setError] = useState('')
 
   useEffect(() => { if (!open) return; void loadQuranTranslations().then(dataset => setTranslations(dataset.translations)).catch(e => setError(e instanceof Error ? e.message : 'Translation could not be loaded.')) }, [open])
   useEffect(() => { localStorage.setItem('noortools:phase23:translation-bookmarks', JSON.stringify(bookmarks)) }, [bookmarks])
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase()
-    return translations.filter(item => (selectedSurah === null || item.surah === selectedSurah) && (!needle || `${item.surah}:${item.ayah} ${item.text}`.toLocaleLowerCase().includes(needle))).slice(0, 80)
-  }, [translations, selectedSurah, query])
+  const filtered = useMemo(() => searchQuranTranslations(translations.filter(item => selectedSurah === null || item.surah === selectedSurah), query).slice(0, 80), [translations, selectedSurah, query])
   const surahs = useMemo(() => Array.from(new Set(translations.map(item => item.surah))), [translations])
-  const toggleBookmark = (id: string) => setBookmarks(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
 
   return <>
     <button className="phase23-launcher" onClick={() => setOpen(true)} aria-label="Open Phase 2.3 verified content">2.3 <span>Hadith · Translation · Audio</span></button>
@@ -36,11 +39,11 @@ export default function Phase23Launcher() {
         {section === 'translation' && <div className="card">
           <p className="eyebrow">ENGLISH · PICKTHALL 1930</p>
           <h2>The Meaning of the Glorious Koran</h2>
-          <p className="muted">Translator: Marmaduke William Pickthall · 1930 edition · source-verified public-domain work. No text edits are introduced by NoorTools.</p>
-          <div className="row"><button className={selectedSurah === null ? 'selected' : ''} onClick={() => setSelectedSurah(null)}>All Surahs</button>{surahs.slice(0, 20).map(n => <button key={n} className={selectedSurah === n ? 'selected' : ''} onClick={() => setSelectedSurah(n)}>Surah {n}</button>)}</div>
-          <input className="content-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search English translation" />
-          {filtered.length === 0 ? <p className="muted">No matching translation ayahs.</p> : <div className="reader-list">{filtered.map(item => <article className="ayah-card" key={item.id}><div className="ayah-meta"><span>{item.surah}:{item.ayah}</span><button onClick={() => toggleBookmark(item.id)}>{bookmarks.includes(item.id) ? '★' : '☆'}</button></div><p>{item.text}</p><p className="footnote">{item.edition} · {item.translator}<br />Source: Project Gutenberg eBook #16955 · SHA-256 {item.source.contentHash}</p></article>)}</div>}
-          <p className="footnote">Displayed text is fetched from the versioned Project Gutenberg source during build; generated data is validated to 6,236 ayahs. Translation review state: pending_scholar_review.</p>
+          <p className="muted">Translator: Marmaduke William Pickthall · 1930 edition · source-verified public-domain work. NoorTools does not claim scholar review.</p>
+          <label>Surah<select value={selectedSurah ?? ''} onChange={e => setSelectedSurah(e.target.value ? Number(e.target.value) : null)}><option value="">All Surahs</option>{surahs.map(n => <option key={n} value={n}>Surah {n}</option>)}</select></label>
+          <input className="content-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search English translation or 2:255" />
+          {filtered.length === 0 ? <p className="muted">{translations.length ? 'No matching translation ayahs.' : 'Loading the verified translation…'}</p> : <div className="reader-list">{filtered.map(item => <article className="ayah-card" key={item.id}><div className="ayah-meta"><span>{item.surah}:{item.ayah}</span><button aria-label={`${bookmarks.includes(item.id) ? 'Remove' : 'Add'} bookmark for ${item.surah}:${item.ayah}`} onClick={() => setBookmarks(current => toggleTranslationBookmark(current, item.id))}>{bookmarks.includes(item.id) ? '★' : '☆'}</button></div><p>{item.text}</p><p className="footnote">{item.edition} · {item.translator}<br />Source: {item.source.name}<br />{item.source.sourceURL}<br />SHA-256 {item.source.contentHash}</p></article>)}</div>}
+          <p className="footnote">The Project Gutenberg source has 6,232 Pickthall verse records in this transcription. Four omitted ayahs are sourced separately from the same public-domain 1930 edition preserved by Internet Archive, with record-level source metadata. Final review state: pending_scholar_review.</p>
         </div>}
 
         {section === 'hadith' && <div className="card"><p className="eyebrow">HADITH</p><h2>Unavailable — source not cleared</h2><p className="muted">No major Hadith collection is bundled or displayed yet. Sunnah.com API access does not establish a redistribution grant, and the audited fawazahmed0 corpus has unresolved text-license questions.</p><span className="status-pill">{HADITH_UI_STATE.reviewState}</span><p className="footnote">No Hadith number, Arabic, translation, grading, or reference is fabricated. A collection can be integrated only after edition-specific provenance and redistribution permission are proven.</p></div>}
