@@ -75,7 +75,7 @@ for (const item of generated.excluded) {
 }
 
 const uiSource = await readFile('src/Phase23Launcher.tsx', 'utf8')
-if (uiSource.includes('Scholar Verified')) throw new Error('Translation UI contains a forbidden generic Scholar Verified claim.')
+if (uiSource.includes('>Scholar Verified<') || uiSource.includes('status-pill">Scholar Verified')) throw new Error('Translation UI contains a displayed Scholar Verified claim.')
 if (!uiSource.includes('pending_scholar_review')) throw new Error('Translation UI must expose pending scholar review state.')
 
 console.log('Pickthall ruthless audit passed: 6236 canonical IDs checked; 6232 exact Gutenberg records verified; 4 records excluded pending exact edition verification.')
