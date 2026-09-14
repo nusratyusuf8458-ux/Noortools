@@ -23,7 +23,8 @@ describe('prayer engine', () => {
   })
   it('rolls to the next day Fajr after Isha', () => {
     const prayers = calculatePrayerTimes(date, 19.076, 72.8777)
-    const late = new Date(prayers[prayers.length - 1].time.getTime() + 60_000)
+    const isha = prayers.find(p => p.name === 'Isha')!
+    const late = new Date(isha.time.getTime() + 60_000)
     const next = nextPrayer(prayers, 19.076, 72.8777, late)
     expect(next?.name).toBe('Fajr')
     expect(next?.time.getTime()).toBeGreaterThan(late.getTime())
