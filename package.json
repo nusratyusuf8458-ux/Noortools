@@ -13,6 +13,7 @@
     "lint": "tsc --noEmit --pretty false"
   },
   "dependencies": {
+    "@photostructure/tz-lookup": "^11.6.1",
     "@vitejs/plugin-react": "latest",
     "vite": "latest",
     "typescript": "latest",
