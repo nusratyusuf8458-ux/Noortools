@@ -4,6 +4,8 @@ import { mkdir, writeFile } from 'node:fs/promises'
 const QURAN_URL = 'https://tanzil.net/pub/download/index.php?quranType=uthmani&outType=txt-2&agree=true&marks=true&sajdah=true&rub=true&stanween=true'
 const METADATA_URL = 'https://tanzil.net/res/text/metadata/quran-data.xml'
 const OUT_DIR = 'public/content'
+const EXPECTED_SHA256 = 'b9027e22eb7e69d326f1eb7467fed8b7bc1eccbe1a894887ed2b3feb4ef5fc90'
+const IMPORT_DATE = '2026-09-14'
 
 function fail(message) { throw new Error(`Tanzil import failed: ${message}`) }
 function attr(tag, name) { return tag.match(new RegExp(`${name}\\s*=\\s*"([^"]*)"`, 'i'))?.[1] ?? '' }
@@ -16,6 +18,8 @@ if (!quranResponse.ok) fail(`Quran HTTP ${quranResponse.status}`)
 if (!metadataResponse.ok) fail(`metadata HTTP ${metadataResponse.status}`)
 
 const quranBytes = Buffer.from(await quranResponse.arrayBuffer())
+const sha256 = createHash('sha256').update(quranBytes).digest('hex')
+if (sha256 !== EXPECTED_SHA256) fail(`source SHA-256 changed. Expected ${EXPECTED_SHA256}; received ${sha256}. Manual content review is required before release.`)
 const quranText = quranBytes.toString('utf8').replace(/^\uFEFF/, '')
 if (!quranText.includes('Tanzil Quran Text') || !quranText.includes('Creative Commons Attribution 3.0')) fail('download is missing the required Tanzil copyright/license notice')
 
@@ -61,30 +65,17 @@ const juz = partition('juz')
 const pages = partition('page')
 if (juz.length !== 30 || pages.length !== 604) fail(`expected 30 juz and 604 pages in Tanzil metadata; found ${juz.length} juz and ${pages.length} pages`)
 
-const sha256 = createHash('sha256').update(quranBytes).digest('hex')
 const source = {
-  sourceId: 'tanzil-uthmani',
-  sourceName: 'Tanzil Project',
-  sourceVersion: '1.1',
-  edition: 'Uthmani',
+  sourceId: 'tanzil-uthmani', sourceName: 'Tanzil Project', sourceVersion: '1.1', edition: 'Uthmani',
   license: 'Creative Commons Attribution 3.0; verbatim copying only; changing the text is not allowed',
-  licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
-  sourceUrl: QURAN_URL,
-  attributionUrl: 'https://tanzil.net',
-  reference: 'Tanzil Quran Text, Uthmani, Version 1.1',
-  verificationStatus: 'verified',
-  reviewStatus: 'not_reviewed',
-  reviewer: null,
-  reviewDate: null,
-  reviewNotes: null,
-  importVersion: 'noortools-quran-tanzil-1.1',
-  importedAt: new Date().toISOString(),
-  contentHash: sha256,
+  licenseUrl: 'https://creativecommons.org/licenses/by/3.0/', sourceUrl: QURAN_URL, attributionUrl: 'https://tanzil.net',
+  reference: 'Tanzil Quran Text, Uthmani, Version 1.1', verificationStatus: 'verified', reviewStatus: 'not_reviewed',
+  reviewer: null, reviewDate: null, reviewNotes: null, importVersion: 'noortools-quran-tanzil-1.1', importedAt: IMPORT_DATE, contentHash: sha256,
 }
 
 await mkdir(OUT_DIR, { recursive: true })
 await writeFile(`${OUT_DIR}/quran-uthmani-v1.1.txt`, quranBytes)
 await writeFile(`${OUT_DIR}/quran-uthmani-v1.1.json`, JSON.stringify({ source, ayahs }, null, 2))
 await writeFile(`${OUT_DIR}/quran-metadata.json`, JSON.stringify({ source: { sourceId: 'tanzil-quran-metadata', sourceName: 'Tanzil Project', sourceVersion: '1.0', edition: 'Quran Metadata', license: 'Creative Commons Attribution 3.0', sourceUrl: METADATA_URL }, surahs, juz, pages }, null, 2))
-await writeFile(`${OUT_DIR}/quran-manifest.json`, JSON.stringify({ dataset: 'quran', datasetVersion: '1.0.0', source, sourceDownloadUrl: QURAN_URL, metadataDownloadUrl: METADATA_URL, byteLength: quranBytes.length, surahCount: 114, ayahCount: 6236, surahCounts, juzCount: 30, pageCount: 604, canonicalStorage: 'verbatim source Arabic strings; no normalization or content edits', changeNotes: 'Initial NoorTools Tanzil Uthmani v1.1 integration.' }, null, 2))
+await writeFile(`${OUT_DIR}/quran-manifest.json`, JSON.stringify({ dataset: 'quran', datasetVersion: '1.0.0', source, byteLength: quranBytes.length, surahCount: 114, ayahCount: 6236, surahCounts, juzCount: 30, pageCount: 604, canonicalStorage: 'verbatim source Arabic strings; no normalization or content edits', changeNotes: 'Initial NoorTools integration of Tanzil Uthmani v1.1.' }, null, 2))
 console.log(`Tanzil Uthmani v1.1: 114 surahs / 6236 ayahs / 30 juz / 604 pages / ${quranBytes.length} bytes / sha256=${sha256}`)
