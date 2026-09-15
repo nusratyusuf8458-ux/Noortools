@@ -5,16 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "pretest": "node scripts/fetch-tanzil-quran.mjs && node scripts/fetch-phase-2-2-content.mjs && node scripts/fetch-phase-2-3-content.mjs && node scripts/audit-pickthall.mjs",
     "typecheck": "tsc -b --pretty false",
     "build": "node scripts/fetch-tanzil-quran.mjs && node scripts/fetch-phase-2-2-content.mjs && node scripts/fetch-phase-2-3-content.mjs && node scripts/audit-pickthall.mjs && npm run typecheck && vite build",
     "preview": "vite preview",
-    "test": "vitest run --environment jsdom",
+    "test": "node scripts/fetch-tanzil-quran.mjs && node scripts/fetch-phase-2-2-content.mjs && node scripts/fetch-phase-2-3-content.mjs && node scripts/audit-pickthall.mjs && vitest run --environment jsdom",
     "test:watch": "vitest --environment jsdom",
     "lint": "tsc --noEmit --pretty false",
     "android:prepare": "npm run build && node scripts/prepare-android.mjs",
     "android:debug": "npm run android:prepare && cd android && ./gradlew assembleDebug",
-    "android:preview": "npm run android:prepare && cd android && ./gradlew preview",
+    "android:preview": "npm run android:prepare && cd android && ./gradlew assemblePreview",
     "android:release": "npm run android:prepare && cd android && ./gradlew assembleRelease",
     "android:bundle": "npm run android:prepare && cd android && ./gradlew bundleRelease"
   },
