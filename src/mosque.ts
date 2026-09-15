@@ -1,0 +1,177 @@
+export type Coordinate = { lat: number; lon: number }
+export type LocationPermissionState = 'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
+export type MosqueSourceStatus = 'live' | 'cached' | 'unavailable'
+export type PrayerState = 'past' | 'current' | 'upcoming' | 'unavailable'
+export type JummahSession = { label?: string; time: string; women?: boolean; men?: boolean; facilities?: string[] }
+export type Mosque = {
+  id: string
+  source: string
+  sourceUrl: string
+  lastUpdated: string | null
+  name: string | null
+  address: string | null
+  coordinates: Coordinate
+  phone: string | null
+  website: string | null
+  openingHours: string | null
+  facilities: string[]
+  jummah: JummahSession[]
+  mosqueTimetable: Record<string, string> | null
+  sourceTags: Record<string, string>
+}
+export type MosqueResult = Mosque & { distanceMeters: number | null; distanceLabel: string }
+export type GeocodeResult = { label: string; lat: number; lon: number; source: 'nominatim' }
+export type ProviderMetadata = {
+  provider: string
+  dataLicense: string
+  termsUrl: string
+  licenseUrl: string
+  policyUrl: string
+  commercialNote: string
+  cachingNote: string
+  attribution: string
+}
+export const OSM_METADATA: ProviderMetadata = {
+  provider: 'OpenStreetMap data via public Nominatim + Overpass services',
+  dataLicense: 'Open Database License (ODbL) 1.0 for OpenStreetMap geodata',
+  termsUrl: 'https://osmfoundation.org/wiki/Terms_of_Use',
+  licenseUrl: 'https://osmfoundation.org/wiki/Licence',
+  policyUrl: 'https://operations.osmfoundation.org/policies/',
+  commercialNote: 'Public Overpass guidance recommends self-hosted or paid infrastructure for commercial use; NoorTools does not assume unlimited public-server production capacity.',
+  cachingNote: 'NoorTools cache is session-only, bounded, and treated as stale after 6 hours. It is not an offline OSM tile/data archive.',
+  attribution: '© OpenStreetMap contributors',
+}
+export const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
+export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
+export const MOSQUE_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+export const MAX_RESULTS = 50
+
+export function validCoordinate(value: unknown): value is Coordinate {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const v = value as Record<string, unknown>
+  return typeof v.lat === 'number' && Number.isFinite(v.lat) && Math.abs(v.lat) <= 90 && typeof v.lon === 'number' && Number.isFinite(v.lon) && Math.abs(v.lon) <= 180
+}
+export function distanceMeters(a: Coordinate, b: Coordinate): number {
+  if (!validCoordinate(a) || !validCoordinate(b)) throw new Error('Invalid coordinates.')
+  const rad = Math.PI / 180
+  const lat1 = a.lat * rad; const lat2 = b.lat * rad
+  const dLat = (b.lat - a.lat) * rad; const dLon = (b.lon - a.lon) * rad
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
+  return 6371008.8 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+}
+export function formatDistance(meters: number | null): string {
+  if (meters == null || !Number.isFinite(meters)) return 'Distance unavailable'
+  return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)} km`
+}
+function cleanText(value: unknown, max = 500): string | null {
+  if (typeof value !== 'string') return null
+  const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
+  return cleaned || null
+}
+function validHttpUrl(value: unknown): string | null {
+  const text = cleanText(value, 500); if (!text) return null
+  try { const url = new URL(text); return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null } catch { return null }
+}
+function normalizePhone(value: unknown): string | null {
+  const text = cleanText(value, 80); if (!text) return null
+  const allowed = text.replace(/[^0-9+()\-\s]/g, '').trim(); return allowed ? allowed : null
+}
+function tagsToAddress(tags: Record<string, string>): string | null {
+  const parts = [tags['addr:housenumber'], tags['addr:street'], tags['addr:suburb'], tags['addr:city'], tags['addr:postcode']].map(x => cleanText(x, 120)).filter(Boolean)
+  return parts.length ? parts.join(', ') : null
+}
+function facilitiesFromTags(tags: Record<string, string>): string[] {
+  const facilities: string[] = []
+  const map: Array<[string, string]> = [['wheelchair', 'Wheelchair access'], ['toilets', 'Toilets'], ['parking', 'Parking'], ['drinking_water', 'Drinking water'], ['shower', 'Shower'], ['baby_changing', 'Baby changing']]
+  for (const [tag, label] of map) if (tags[tag] === 'yes' || tags[tag] === 'designated') facilities.push(label)
+  if (tags['toilets:wheelchair'] === 'yes') facilities.push('Accessible toilet')
+  return facilities
+}
+function normalizeTags(tags: unknown): Record<string, string> {
+  if (!tags || typeof tags !== 'object' || Array.isArray(tags)) return {}
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(tags)) { const cleaned = cleanText(value, 500); if (cleaned) result[key] = cleaned }
+  return result
+}
+export function mapNominatimResults(data: unknown): GeocodeResult[] {
+  if (!Array.isArray(data)) return []
+  return data.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const v = item as Record<string, unknown>; const lat = Number(v.lat); const lon = Number(v.lon); const display = cleanText(v.display_name, 300)
+    return Number.isFinite(lat) && Number.isFinite(lon) && validCoordinate({ lat, lon }) && display ? [{ label: display, lat, lon, source: 'nominatim' as const }] : []
+  }).slice(0, 8)
+}
+function elementCoordinate(element: Record<string, unknown>): Coordinate | null {
+  if (typeof element.lat === 'number' && typeof element.lon === 'number' && validCoordinate({ lat: element.lat, lon: element.lon })) return { lat: element.lat, lon: element.lon }
+  const center = element.center; if (center && typeof center === 'object' && !Array.isArray(center)) { const c = center as Record<string, unknown>; const coord = { lat: Number(c.lat), lon: Number(c.lon) }; return Number.isFinite(coord.lat) && Number.isFinite(coord.lon) && validCoordinate(coord) ? coord : null }
+  return null
+}
+export function mapOverpassResults(data: unknown): Mosque[] {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return []
+  const elements = (data as Record<string, unknown>).elements; if (!Array.isArray(elements)) return []
+  return elements.flatMap(element => {
+    if (!element || typeof element !== 'object' || Array.isArray(element)) return []
+    const e = element as Record<string, unknown>; const coord = elementCoordinate(e); if (!coord) return []
+    const tags = normalizeTags(e.tags); const id = typeof e.id === 'number' ? String(e.id) : null; const type = cleanText(e.type, 30)
+    if (!id || !type) return []
+    const name = cleanText(tags.name, 180)
+    if (!name && tags.amenity !== 'place_of_worship') return []
+    if (tags.religion && tags.religion !== 'muslim' && tags.religion !== 'islam') return []
+    const sourceUrl = `https://www.openstreetmap.org/${encodeURIComponent(type)}/${encodeURIComponent(id)}`
+    return [{ id: `osm:${type}:${id}`, source: 'OpenStreetMap', sourceUrl, lastUpdated: cleanText(e.timestamp, 60), name, address: tagsToAddress(tags), coordinates: coord, phone: normalizePhone(tags.phone ?? tags['contact:phone']), website: validHttpUrl(tags.website ?? tags['contact:website']), openingHours: cleanText(tags.opening_hours, 300), facilities: facilitiesFromTags(tags), jummah: [], mosqueTimetable: null, sourceTags: tags }]
+  })
+}
+export function dedupeMosques(items: Mosque[]): Mosque[] {
+  const seen = new Set<string>(); const result: Mosque[] = []
+  for (const item of items) {
+    const key = `${item.id}|${item.name?.toLocaleLowerCase() ?? ''}|${item.coordinates.lat.toFixed(5)}|${item.coordinates.lon.toFixed(5)}`
+    if (!seen.has(key)) { seen.add(key); result.push(item) }
+  }
+  return result
+}
+export function sortByDistance(items: Mosque[], origin: Coordinate | null): MosqueResult[] {
+  return items.map(item => { const distance = origin && validCoordinate(origin) ? distanceMeters(origin, item.coordinates) : null; return { ...item, distanceMeters: distance, distanceLabel: formatDistance(distance) } }).sort((a, b) => (a.distanceMeters ?? Number.POSITIVE_INFINITY) - (b.distanceMeters ?? Number.POSITIVE_INFINITY))
+}
+function ensureProviderResponse(ok: boolean, status: number): void { if (!ok) throw new Error(status === 429 ? 'The mosque service is rate-limited. Please try again later.' : `Mosque service request failed (${status}).`) }
+export async function searchLocations(query: string, signal?: AbortSignal): Promise<GeocodeResult[]> {
+  const clean = cleanText(query, 160); if (!clean) return []
+  const params = new URLSearchParams({ q: clean, format: 'jsonv2', limit: '8', addressdetails: '1' })
+  const response = await fetch(`${NOMINATIM_URL}?${params}`, { signal, headers: { Accept: 'application/json' } })
+  ensureProviderResponse(response.ok, response.status); return mapNominatimResults(await response.json())
+}
+export async function nearbyMosques(origin: Coordinate, radiusMeters = 5000, signal?: AbortSignal): Promise<Mosque[]> {
+  if (!validCoordinate(origin)) throw new Error('Invalid location coordinates.')
+  const radius = Math.min(10000, Math.max(500, Math.round(radiusMeters)))
+  const query = `[out:json][timeout:12];(nwr[amenity=place_of_worship][religion~"^(muslim|islam)$"](around:${radius},${origin.lat},${origin.lon});nwr[amenity=place_of_worship][name~"(mosque|masjid|مسجد)",i](around:${radius},${origin.lat},${origin.lon}););out center tags;`
+  const response = await fetch(OVERPASS_URL, { method: 'POST', body: new URLSearchParams({ data: query }), signal, headers: { Accept: 'application/json' } })
+  ensureProviderResponse(response.ok, response.status); return dedupeMosques(mapOverpassResults(await response.json()))
+}
+export function externalDirectionsUrl(origin: Coordinate | null, destination: Coordinate): string {
+  const from = origin ? `${origin.lat},${origin.lon}` : ''
+  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${encodeURIComponent(from)}%3B${encodeURIComponent(`${destination.lat},${destination.lon}`)}`
+}
+export function mosquePrayerState(timetable: Record<string, string> | null, now: Date, timeZone: string | null): { states: Record<string, PrayerState>; reason: string } {
+  if (!timetable || !timeZone) return { states: {}, reason: 'Verified mosque timetable unavailable.' }
+  const result: Record<string, PrayerState> = {}
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now)
+  const y = Number(parts.find(p => p.type === 'year')?.value); const m = Number(parts.find(p => p.type === 'month')?.value); const d = Number(parts.find(p => p.type === 'day')?.value)
+  const dayKey = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  const today = Date.UTC(y, m - 1, d)
+  for (const [name, value] of Object.entries(timetable)) {
+    const match = /^(\d{1,2}):(\d{2})$/.exec(value); if (!match) { result[name] = 'unavailable'; continue }
+    const local = new Date(today + (Number(match[1]) * 60 + Number(match[2])) * 60000)
+    const delta = now.getTime() - local.getTime()
+    // The Date above is UTC only as a comparison bucket; shift through Intl so DST is never treated as a generic device time.
+    const displayedNow = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now)
+    const currentMinutes = Number(displayedNow.slice(0, 2)) * 60 + Number(displayedNow.slice(3, 5)); const targetMinutes = Number(match[1]) * 60 + Number(match[2])
+    if (currentMinutes === targetMinutes) result[name] = 'current'; else result[name] = currentMinutes > targetMinutes ? 'past' : 'upcoming'
+    void delta; void dayKey
+  }
+  return { states: result, reason: 'State derived only from the mosque-provided timetable and its timezone.' }
+}
+export function reportCategories() { return ['wrong address', 'wrong phone', 'wrong hours', 'wrong facility', 'wrong timetable', 'duplicate mosque', 'closed mosque'] as const }
+export type ReportCategory = ReturnType<typeof reportCategories>[number]
+export function buildLocalReportPackage(mosque: Mosque, category: ReportCategory, details: string, createdAt = new Date().toISOString()): string {
+  const cleanDetails = cleanText(details, 2000) ?? ''
+  return JSON.stringify({ schema: 'noortools.mosque-report', version: 1, createdAt, provider: mosque.source, sourceId: mosque.id, mosqueName: mosque.name, category, details: cleanDetails }, null, 2)
+}
