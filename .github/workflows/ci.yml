@@ -2,9 +2,9 @@ name: NoorTools CI
 
 on:
   push:
-    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3, phase-3b, phase-3c, phase-3d, phase-3e]
+    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3, phase-3b, phase-3c, phase-3d, phase-3e, phase-3f]
   pull_request:
-    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3, phase-3b, phase-3c, phase-3d, phase-3e]
+    branches: [main, phase-1, phase-2, phase-2.1, phase-2.2, phase-2.3, phase-2.4, phase-3, phase-3b, phase-3c, phase-3d, phase-3e, phase-3f]
 
 permissions:
   contents: read
@@ -12,7 +12,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
