@@ -91,6 +91,6 @@ jobs:
             adb shell appops set com.noortools.mobile ACCESS_FINE_LOCATION deny
             adb shell am force-stop com.noortools.mobile
             adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell force-stop com.noortools.mobile
+            adb shell am force-stop com.noortools.mobile
             adb shell am start -n com.noortools.mobile/.MainActivity
             adb shell input keyevent 4
