@@ -22,19 +22,19 @@ let gradle = readFileSync(appGradle, 'utf8')
 gradle = gradle.replace(/applicationId\s+["'][^"']+["']/, 'applicationId "com.noortools.mobile"')
 gradle = gradle.replace(/versionCode\s+\d+/, 'versionCode 1')
 gradle = gradle.replace(/versionName\s+["'][^"']+["']/, 'versionName "0.1.0"')
-if (!gradle.includes('create("preview")')) {
-  gradle = gradle.replace(/buildTypes\s*\{/, 'buildTypes {\n        create("preview") { initWith(getByName("debug")); debuggable = false; matchingFallbacks += ["debug"] }')
+if (!gradle.includes('preview {')) {
+  gradle = gradle.replace(/buildTypes\s*\{/, 'buildTypes {\n        preview {\n            initWith debug\n            debuggable false\n            matchingFallbacks = [\'debug\']\n        }')
 }
 if (process.env.NOORTOOLS_KEYSTORE_PATH && process.env.NOORTOOLS_KEYSTORE_PASSWORD && process.env.NOORTOOLS_KEY_ALIAS && process.env.NOORTOOLS_KEY_PASSWORD && !gradle.includes('NOORTOOLS_KEYSTORE_PATH')) {
-  const signing = `\n    signingConfigs {\n        create("noortoolsRelease") {\n            storeFile = file(System.getenv("NOORTOOLS_KEYSTORE_PATH"))\n            storePassword = System.getenv("NOORTOOLS_KEYSTORE_PASSWORD")\n            keyAlias = System.getenv("NOORTOOLS_KEY_ALIAS")\n            keyPassword = System.getenv("NOORTOOLS_KEY_PASSWORD")\n        }\n    }\n`
+  const signing = `\n    signingConfigs {\n        noortoolsRelease {\n            storeFile file(System.getenv("NOORTOOLS_KEYSTORE_PATH"))\n            storePassword System.getenv("NOORTOOLS_KEYSTORE_PASSWORD")\n            keyAlias System.getenv("NOORTOOLS_KEY_ALIAS")\n            keyPassword System.getenv("NOORTOOLS_KEY_PASSWORD")\n        }\n    }\n`
   gradle = gradle.replace('android {', `android {${signing}`)
-  gradle = gradle.replace(/release\s*\{/, 'release { signingConfig = signingConfigs.getByName("noortoolsRelease")')
+  gradle = gradle.replace(/release\s*\{/, 'release { signingConfig signingConfigs.noortoolsRelease')
 }
 writeFileSync(appGradle, gradle)
 
 let xml = readFileSync(manifest, 'utf8')
 xml = xml.replace('android:allowBackup="true"', 'android:allowBackup="false"')
-xml = xml.replace('<uses-permission android:name="android.permission.INTERNET" />', '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.VIBRATE" />')
+if (!xml.includes('android.permission.ACCESS_COARSE_LOCATION')) xml = xml.replace('<uses-permission android:name="android.permission.INTERNET" />', '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.VIBRATE" />')
 if (!xml.includes('android.intent.category.BROWSABLE')) {
   xml = xml.replace('</intent-filter>', '</intent-filter>\n            <intent-filter>\n                <action android:name="android.intent.action.VIEW" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <category android:name="android.intent.category.BROWSABLE" />\n                <data android:scheme="noortools" android:host="open" />\n            </intent-filter>', 1)
 }
