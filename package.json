@@ -11,9 +11,22 @@
     "preview": "vite preview",
     "test": "vitest run --environment jsdom",
     "test:watch": "vitest --environment jsdom",
-    "lint": "tsc --noEmit --pretty false"
+    "lint": "tsc --noEmit --pretty false",
+    "android:prepare": "npm run build && node scripts/prepare-android.mjs",
+    "android:debug": "npm run android:prepare && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run android:prepare && cd android && ./gradlew assembleRelease",
+    "android:bundle": "npm run android:prepare && cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
+    "@capacitor/core": "8.5.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/geolocation": "8.2.2",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/keyboard": "8.0.5",
+    "@capacitor/local-notifications": "8.3.1",
+    "@capacitor/share": "8.0.1",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.3",
     "@photostructure/tz-lookup": "^11.6.1",
     "@vitejs/plugin-react": "latest",
     "vite": "latest",
@@ -23,6 +36,8 @@
     "vitest": "latest"
   },
   "devDependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/cli": "8.5.2",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
