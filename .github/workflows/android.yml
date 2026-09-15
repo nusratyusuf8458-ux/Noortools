@@ -27,12 +27,14 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Build web assets
+        run: npm run build
       - name: Prepare Android project
         run: node -e "import('./scripts/prepare-android.mjs')"
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace
       - name: Build preview APK
-        run: cd android && ./gradlew preview --no-daemon --stacktrace
+        run: cd android && ./gradlew assemblePreview --no-daemon --stacktrace
       - name: Build release APK
         run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace
       - name: Build release AAB
@@ -65,6 +67,8 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Build web assets
+        run: npm run build
       - name: Prepare Android project
         run: node -e "import('./scripts/prepare-android.mjs')"
       - name: Build debug APK
@@ -83,11 +87,10 @@ jobs:
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
             adb shell am start -n com.noortools.mobile/.MainActivity
             adb shell pidof com.noortools.mobile
-            adb shell dumpsys package com.noortools.mobile | grep -E 'versionName=0.1.0|versionCode=1' || true
+            adb shell dumpsys package com.noortools.mobile | grep -E 'versionName=0.1.0|versionCode=1'
             adb shell appops set com.noortools.mobile ACCESS_FINE_LOCATION deny
             adb shell am force-stop com.noortools.mobile
             adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell am force-stop com.noortools.mobile
+            adb shell force-stop com.noortools.mobile
             adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell input keyevent 4
             adb shell input keyevent 4
