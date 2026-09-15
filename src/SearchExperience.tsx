@@ -5,92 +5,30 @@ import { loadQuranTranslations, type QuranTranslation, type ExcludedQuranTransla
 import { addSearchHistory, clearSearchHistory, loadSearchHistory } from './searchHistory'
 import { HighlightedText } from './searchPresentation'
 import { searchEmptyState, searchMatches, type SearchContentType, type SearchFilter } from './searchModel'
+import { searchLearning } from './learning'
 
-type Result = { id: string; type: SearchContentType; label: string; title: string; text: string; source: string; status: string; rtl?: boolean; unavailable?: boolean }
+type Result={id:string;type:SearchContentType;label:string;title:string;text:string;source:string;status:string;rtl?:boolean;unavailable?:boolean}
+const status=(reviewState?:string):string=>reviewState==='pending_scholar_review'?'Source verified · scholar review pending':reviewState==='source_verified'?'Source verified':'Unavailable'
+const searchablePresentation=(arabic:string,translation:string,query:string)=>searchMatches(arabic,query)?{text:arabic,rtl:true}:{text:translation,rtl:false}
 
-function status(reviewState?: string): string {
-  return reviewState === 'pending_scholar_review' ? 'Source verified · scholar review pending' : reviewState === 'source_verified' ? 'Source verified' : 'Unavailable'
-}
-
-function searchablePresentation(arabic: string, translation: string, query: string): { text: string; rtl: boolean } {
-  if (searchMatches(arabic, query)) return { text: arabic, rtl: true }
-  return { text: translation, rtl: false }
-}
-
-export default function SearchExperience({ onClose }: { onClose: () => void }) {
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<SearchFilter>('all')
-  const [history, setHistory] = useState<string[]>(loadSearchHistory)
-  const [quran, setQuran] = useState<QuranRuntime | null>(null)
-  const [names, setNames] = useState<AllahName[]>([])
-  const [duas, setDuas] = useState<Dua[]>([])
-  const [azkar, setAzkar] = useState<Azkar[]>([])
-  const [translations, setTranslations] = useState<QuranTranslation[]>([])
-  const [excluded, setExcluded] = useState<ExcludedQuranTranslation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    void Promise.all([loadQuran(), loadVerifiedContent(), loadQuranTranslations()]).then(([q, c, t]) => {
-      setQuran(q); setNames(c.names); setDuas(c.duas); setAzkar(c.azkar); setTranslations(t.translations); setExcluded(t.excluded)
-    }).catch(e => setError(e instanceof Error ? e.message : 'Verified search data could not be loaded.')).finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
-  const translationMap = useMemo(() => new Map(translations.map(item => [`${item.surah}:${item.ayah}`, item])), [translations])
-  const results = useMemo<Result[]>(() => {
-    const q = query.trim()
-    if (!q) return []
-    const result: Result[] = []
-    if (filter === 'all' || filter === 'quran') {
-      quran?.ayahs.forEach(item => {
-        const reference = `${item.surah}:${item.ayah}`
-        const translation = translationMap.get(reference)
-        if (searchMatches(`${reference} ${item.arabic}`, q)) result.push({ id: `${item.id}:arabic`, type: 'quran', label: 'Quran Arabic', title: `Surah ${item.surah} · Ayah ${item.ayah}`, text: item.arabic, source: 'Tanzil Project · Uthmani v1.1', status: 'Source verified', rtl: true })
-        if (translation && searchMatches(`${reference} ${translation.text}`, q)) result.push({ id: `${item.id}:pickthall`, type: 'quran', label: 'Pickthall translation', title: `Surah ${item.surah} · Ayah ${item.ayah}`, text: translation.text, source: `${translation.translator} · ${translation.edition}`, status: status(translation.reviewState) })
-      })
-      excluded.forEach(item => {
-        const reference = `${item.surah}:${item.ayah}`
-        if (searchMatches(reference, q)) result.push({ id: `excluded:${reference}`, type: 'quran', label: 'Pickthall translation', title: `Surah ${item.surah} · Ayah ${item.ayah}`, text: 'Translation unavailable for this record.', source: 'Pickthall 1930 · excluded pending exact edition verification', status: 'Unavailable', unavailable: true })
-      })
-    }
-    if (filter === 'all' || filter === 'names') names.forEach(item => {
-      const presentation = searchablePresentation(item.arabic, item.meaning, q)
-      if (searchMatches(`${item.id} ${item.title} ${item.arabic} ${item.transliteration} ${item.meaning}`, q)) result.push({ id: item.id, type: 'names', label: '99 Names', title: item.transliteration, text: presentation.text, source: `${item.source.sourceName} · v${item.source.sourceVersion}`, status: status(item.source.reviewState), rtl: presentation.rtl })
-    })
-    if (filter === 'all' || filter === 'duas') duas.forEach(item => {
-      const presentation = searchablePresentation(item.arabic, item.translation, q)
-      if (searchMatches(`${item.id} ${item.title} ${item.arabic} ${item.translation} ${item.reference}`, q)) result.push({ id: item.id, type: 'duas', label: 'Dua', title: item.title, text: presentation.text, source: `${item.source.sourceName} · v${item.source.sourceVersion}`, status: status(item.source.reviewState), rtl: presentation.rtl })
-    })
-    if (filter === 'all' || filter === 'azkar') azkar.forEach(item => {
-      const presentation = searchablePresentation(item.arabic, item.translation, q)
-      if (searchMatches(`${item.id} ${item.title} ${item.arabic} ${item.translation} ${item.reference}`, q)) result.push({ id: item.id, type: 'azkar', label: 'Azkar', title: item.title, text: presentation.text, source: `${item.source.sourceName} · v${item.source.sourceVersion}`, status: status(item.source.reviewState), rtl: presentation.rtl })
-    })
-    return result.slice(0, 120)
-  }, [query, filter, quran, names, duas, azkar, translationMap, excluded])
-
-  const submit = () => { const clean = query.trim(); if (clean) setHistory(addSearchHistory(history, clean)) }
-  const chooseHistory = (value: string) => { setQuery(value); setFilter('all') }
-  const resultState = searchEmptyState(query, results.length)
-
-  return <div className="search-experience" role="dialog" aria-modal="true" aria-label="Verified content search">
-    <div className="search-experience-panel">
-      <header className="search-header"><div><p className="eyebrow">NOORTOOLS SEARCH</p><h1>Search verified content</h1><p className="muted">Quran Arabic, available Pickthall translation, 99 Names, Duas and Azkar. Blocked and missing datasets never appear.</p></div><button onClick={onClose} aria-label="Close search">×</button></header>
-      <form className="search-box" onSubmit={event => { event.preventDefault(); submit() }}>
-        <input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Arabic, English, title, reference or 2:255" aria-label="Search verified content" />
-        {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
-        <button className="primary" type="submit">Search</button>
-      </form>
-      <div className="search-filters" role="group" aria-label="Search content type filters">{(['all', 'quran', 'names', 'duas', 'azkar'] as SearchFilter[]).map(value => <button key={value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)} type="button">{value === 'all' ? 'All' : value === 'quran' ? 'Quran' : value === 'names' ? '99 Names' : value === 'duas' ? 'Duas' : 'Azkar'}</button>)}</div>
-      {error && <div className="empty-panel" role="alert"><span>!</span><p>{error}</p></div>}
-      {resultState === 'idle' && (history.length > 0 ? <section className="search-history" aria-label="Recent searches"><div className="card-head"><h2>Recent searches</h2><button onClick={() => { clearSearchHistory(); setHistory([]) }} type="button">Clear history</button></div><div className="row">{history.map(value => <button key={value} onClick={() => chooseHistory(value)} type="button">↗ {value}</button>)}</div></section> : <div className="search-empty"><span>⌕</span><h2>Search your verified library</h2><p>Results appear instantly as you type. Recent searches stay only on this device.</p></div>)}
-      {resultState !== 'idle' && <section className="search-results" aria-live="polite"><div className="card-head"><h2>{loading ? 'Searching…' : `${results.length} result${results.length === 1 ? '' : 's'}`}</h2><span className="muted">Presentation-only highlighting</span></div>{resultState === 'no-results' && !loading && <div className="search-empty"><span>⌕</span><h2>No matching verified content</h2><p>No source text was generated or substituted for unavailable records.</p></div>}<div className="reader-list">{results.map(result => <article className="search-result-card" key={result.id} dir={result.rtl ? 'rtl' : 'ltr'}><div className="ayah-meta"><div><p className="eyebrow">{result.label}</p><h3 dir="ltr">{result.title}</h3></div>{result.unavailable && <span className="status-pill">Unavailable</span>}</div><p className={result.rtl ? 'search-result-text arabic-search-result' : 'search-result-text'}><HighlightedText text={result.text} query={query} dir={result.rtl ? 'rtl' : 'ltr'} /></p><p className="source-line" dir="ltr">{result.unavailable ? 'Translation unavailable for this record. No replacement text is generated.' : `Source: ${result.source} · ${result.status}`}</p></article>)}</div></section>}
-      <p className="footnote"><span aria-hidden="true">Local only · </span>Search history stays on this device and is never sent to a NoorTools server.</p>
-    </div>
-  </div>
+export default function SearchExperience({onClose}:{onClose:()=>void}){
+ const[query,setQuery]=useState(''),[filter,setFilter]=useState<SearchFilter>('all'),[history,setHistory]=useState<string[]>(loadSearchHistory),[quran,setQuran]=useState<QuranRuntime|null>(null),[names,setNames]=useState<AllahName[]>([]),[duas,setDuas]=useState<Dua[]>([]),[azkar,setAzkar]=useState<Azkar[]>([]),[translations,setTranslations]=useState<QuranTranslation[]>([]),[excluded,setExcluded]=useState<ExcludedQuranTranslation[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('')
+ useEffect(()=>{void Promise.all([loadQuran(),loadVerifiedContent(),loadQuranTranslations()]).then(([q,c,t])=>{setQuran(q);setNames(c.names);setDuas(c.duas);setAzkar(c.azkar);setTranslations(t.translations);setExcluded(t.excluded)}).catch(e=>setError(e instanceof Error?e.message:'Verified search data could not be loaded.')).finally(()=>setLoading(false))},[])
+ useEffect(()=>{const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape')onClose()};window.addEventListener('keydown',onKeyDown);return()=>window.removeEventListener('keydown',onKeyDown)},[onClose])
+ const translationMap=useMemo(()=>new Map(translations.map(item=>[`${item.surah}:${item.ayah}`,item])),[translations])
+ const results=useMemo<Result[]>(()=>{const q=query.trim();if(!q)return[];const result:Result[]=[]
+ if(filter==='all'||filter==='quran'){quran?.ayahs.forEach(item=>{const reference=`${item.surah}:${item.ayah}`,translation=translationMap.get(reference);if(searchMatches(`${reference} ${item.arabic}`,q))result.push({id:`${item.id}:arabic`,type:'quran',label:'Quran Arabic',title:`Surah ${item.surah} · Ayah ${item.ayah}`,text:item.arabic,source:'Tanzil Project · Uthmani v1.1',status:'Source verified',rtl:true});if(translation&&searchMatches(`${reference} ${translation.text}`,q))result.push({id:`${item.id}:pickthall`,type:'quran',label:'Pickthall translation',title:`Surah ${item.surah} · Ayah ${item.ayah}`,text:translation.text,source:`${translation.translator} · ${translation.edition}`,status:status(translation.reviewState)})});excluded.forEach(item=>{const reference=`${item.surah}:${item.ayah}`;if(searchMatches(reference,q))result.push({id:`excluded:${reference}`,type:'quran',label:'Pickthall translation',title:`Surah ${item.surah} · Ayah ${item.ayah}`,text:'Translation unavailable for this record.',source:'Pickthall 1930 · excluded pending exact edition verification',status:'Unavailable',unavailable:true})})}
+ if(filter==='all'||filter==='names')names.forEach(item=>{const presentation=searchablePresentation(item.arabic,item.meaning,q);if(searchMatches(`${item.id} ${item.title} ${item.arabic} ${item.transliteration} ${item.meaning}`,q))result.push({id:item.id,type:'names',label:'99 Names',title:item.transliteration,text:presentation.text,source:`${item.source.sourceName} · v${item.source.sourceVersion}`,status:status(item.source.reviewState),rtl:presentation.rtl})})
+ if(filter==='all'||filter==='duas')duas.forEach(item=>{const presentation=searchablePresentation(item.arabic,item.translation,q);if(searchMatches(`${item.id} ${item.title} ${item.arabic} ${item.translation} ${item.reference}`,q))result.push({id:item.id,type:'duas',label:'Dua',title:item.title,text:presentation.text,source:`${item.source.sourceName} · v${item.source.sourceVersion}`,status:status(item.source.reviewState),rtl:presentation.rtl})})
+ if(filter==='all'||filter==='azkar')azkar.forEach(item=>{const presentation=searchablePresentation(item.arabic,item.translation,q);if(searchMatches(`${item.id} ${item.title} ${item.arabic} ${item.translation} ${item.reference}`,q))result.push({id:item.id,type:'azkar',label:'Azkar',title:item.title,text:presentation.text,source:`${item.source.sourceName} · v${item.source.sourceVersion}`,status:status(item.source.reviewState),rtl:presentation.rtl})})
+ if(filter==='all'||filter==='learning')searchLearning(q).forEach(item=>result.push({id:item.id,type:'learning',label:'Islamic Learning',title:item.title,text:item.content,source:item.sourceName,status:item.reviewStatus==='pending_scholar_review'?'Source verified · scholar review pending':'Source verified',rtl:item.language.startsWith('ar')}))
+ return result.slice(0,120)},[query,filter,quran,names,duas,azkar,translationMap,excluded])
+ const submit=()=>{const clean=query.trim();if(clean)setHistory(addSearchHistory(history,clean))};const chooseHistory=(value:string)=>{setQuery(value);setFilter('all')};const resultState=searchEmptyState(query,results.length)
+ return <div className="search-experience" role="dialog" aria-modal="true" aria-label="Verified content search"><div className="search-experience-panel"><header className="search-header"><div><p className="eyebrow">NOORTOOLS SEARCH</p><h1>Search verified content</h1><p className="muted">Quran Arabic, available Pickthall translation, 99 Names, Duas, Azkar and cleared learning content. Blocked and missing datasets never appear.</p></div><button onClick={onClose} aria-label="Close search">×</button></header>
+ <form className="search-box" onSubmit={event=>{event.preventDefault();submit()}}><input autoFocus value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search Arabic, English, title, reference or learning topic" aria-label="Search verified content"/>{query&&<button type="button" onClick={()=>setQuery('')} aria-label="Clear search">×</button>}<button className="primary" type="submit">Search</button></form>
+ <div className="search-filters" role="group" aria-label="Search content type filters">{(['all','quran','names','duas','azkar','learning'] as SearchFilter[]).map(value=><button key={value} className={filter===value?'selected':''} onClick={()=>setFilter(value)} type="button">{value==='all'?'All':value==='quran'?'Quran':value==='names'?'99 Names':value==='duas'?'Duas':value==='azkar'?'Azkar':'Learning'}</button>)}</div>
+ {error&&<div className="empty-panel" role="alert"><span>!</span><p>{error}</p></div>}
+ {resultState==='idle'&&(history.length>0?<section className="search-history" aria-label="Recent searches"><div className="card-head"><h2>Recent searches</h2><button onClick={()=>{clearSearchHistory();setHistory([])}} type="button">Clear history</button></div><div className="row">{history.map(value=><button key={value} onClick={()=>chooseHistory(value)} type="button">↗ {value}</button>)}</div></section>:<div className="search-empty"><span>⌕</span><h2>Search your verified library</h2><p>Results appear instantly as you type. Recent searches stay only on this device.</p></div>)}
+ {resultState!=='idle'&&<section className="search-results" aria-live="polite"><div className="card-head"><h2>{loading?'Searching…':`${results.length} result${results.length===1?'':'s'}`}</h2><span className="muted">Presentation-only highlighting</span></div>{resultState==='no-results'&&!loading&&<div className="search-empty"><span>⌕</span><h2>No matching verified content</h2><p>No source text was generated or substituted for unavailable records.</p></div>}<div className="reader-list">{results.map(result=><article className="search-result-card" key={result.id} dir={result.rtl?'rtl':'ltr'}><div className="ayah-meta"><div><p className="eyebrow">{result.label}</p><h3 dir="ltr">{result.title}</h3></div>{result.unavailable&&<span className="status-pill">Unavailable</span>}</div><p className={result.rtl?'search-result-text arabic-search-result':'search-result-text'}><HighlightedText text={result.text} query={query} dir={result.rtl?'rtl':'ltr'}/></p><p className="source-line" dir="ltr">{result.unavailable?'Translation unavailable for this record. No replacement text is generated.':`Source: ${result.source} · ${result.status}`}</p></article>)}</div></section>}
+ <p className="footnote"><span aria-hidden="true">Local only · </span>Search history stays on this device and is never sent to a NoorTools server.</p></div></div>
 }
