@@ -17,5 +17,8 @@ import Phase3BLauncher from './Phase3BLauncher'
 import Phase3CLauncher from './Phase3CLauncher'
 import MosqueFinderLauncher from './MosqueFinderLauncher'
 import Phase3ELauncher from './Phase3ELauncher'
+import { initializeAndroidRuntime } from './nativeRuntime'
+
+void initializeAndroidRuntime()
 
 createRoot(document.getElementById('root')!).render(<StrictMode><><App/><Phase2Launcher/><Phase23Launcher/><GlobalSearchLauncher/><Phase3Launcher/><Phase3BLauncher/><Phase3CLauncher/><MosqueFinderLauncher/><Phase3ELauncher/></></StrictMode>)
