@@ -1,0 +1,134 @@
+/* Shared production UI layer: layout integration only; feature behavior remains unchanged. */
+:root {
+  --noor-header-base: 72px;
+  --noor-bottom-base: 72px;
+  --noor-page-gutter: 20px;
+}
+html, body, #root { min-height: 100%; }
+html { overflow-x: hidden; }
+body { overflow-x: hidden; }
+.app { width: 100%; min-height: 100dvh; padding-bottom: calc(var(--noor-bottom-base) + env(safe-area-inset-bottom)); }
+main { width: 100%; min-width: 0; overflow-x: clip; }
+.topbar {
+  min-height: var(--noor-header-base);
+  height: auto;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: 0;
+  padding-left: max(var(--noor-page-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--noor-page-gutter), env(safe-area-inset-right));
+}
+.page { width: min(100%, 1180px); min-width: 0; padding-inline: max(var(--noor-page-gutter), env(safe-area-inset-left)); padding-right: max(var(--noor-page-gutter), env(safe-area-inset-right)); padding-bottom: 34px; }
+.page > * { min-width: 0; }
+.hero { gap: 18px; min-width: 0; }
+.hero > div:first-child { min-width: 0; }
+.hero h1 { overflow-wrap: anywhere; }
+.card, .feature-card, .empty-panel { min-width: 0; }
+.card { overflow-wrap: anywhere; }
+.row, .segmented, .card-head { min-width: 0; }
+button, input, select, textarea { max-width: 100%; }
+button { touch-action: manipulation; }
+
+/* One shell: only the product navigation owns the bottom navigation surface. */
+.app > .bottom-nav { display: none !important; }
+.product-nav {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--noor-bottom-base) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: max(6px, env(safe-area-inset-left));
+  padding-right: max(6px, env(safe-area-inset-right));
+  gap: 0;
+  justify-content: stretch;
+}
+.product-nav button { flex: 1 1 0; width: 0; min-width: 0; min-height: 64px; padding: 7px 4px 5px; }
+.product-nav button span { line-height: 1; }
+.product-nav button[aria-current="page"] { color: #173c3a; font-weight: 800; }
+.product-nav button:focus-visible { outline: 3px solid color-mix(in srgb, #b38a45 65%, transparent); outline-offset: -4px; }
+.product-more-panel { inset: 0 0 calc(var(--noor-bottom-base) + env(safe-area-inset-bottom)); padding: 12px max(12px, env(safe-area-inset-left)) 12px max(12px, env(safe-area-inset-right)); align-items: end; }
+.product-more-menu { max-height: min(78dvh, 640px); overflow: auto; overscroll-behavior: contain; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+/* Shared sticky offsets include the Android safe-area portion of the header. */
+.content-tabs { top: calc(var(--noor-header-base) + env(safe-area-inset-top) + 1px); z-index: 6; }
+.reader-toolbar { top: calc(var(--noor-header-base) + env(safe-area-inset-top) + 58px); z-index: 5; }
+.experience-toast { top: calc(env(safe-area-inset-top) + 8px); }
+
+/* Feature overlays must fully own the viewport while open, so the underlying shell cannot show through. */
+.phase2-overlay,
+.phase3-overlay,
+.phase3b-overlay,
+.phase3c-overlay,
+.phase3e-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  width: 100%;
+  min-height: 100dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.phase2-overlay .content-page,
+.phase3-overlay .page,
+.phase3b-overlay .page,
+.phase3c-overlay .page { min-height: calc(100dvh - env(safe-area-inset-top)); }
+
+/* Development/provider text is kept in code/data for diagnostics, not presented as product chrome. */
+.phase3-page .footnote,
+.phase3b-page .footnote,
+.phase3c-page .footnote,
+.status-pill { display: none !important; }
+.app > main > .page > .empty-panel:not([role="alert"]) { display: none; }
+.origin-chip { font-size: 0; }
+.origin-chip::before { content: "Location selected"; font-size: 12px; }
+.origin-chip button { font-size: 12px; }
+
+/* Small-phone/mobile-first layout. */
+@media (max-width: 760px) {
+  :root { --noor-page-gutter: 14px; }
+  .page { padding-top: 20px; padding-bottom: 26px; }
+  .hero { align-items: flex-start; padding-top: 8px; }
+  .hero h1 { font-size: clamp(28px, 8vw, 38px); line-height: 1.05; }
+  .arabic { flex: 0 0 auto; }
+  .location-card .row, .mosque-location-row, .mosque-controls, .search-line, .detail-actions, .report-actions { width: 100%; }
+  .next-card { flex-wrap: wrap; align-items: flex-start; }
+  .next-card > div:first-child { flex: 1 1 220px; }
+  .countdown { flex: 0 0 auto; margin-left: auto; }
+  .grid.two { grid-template-columns: minmax(0, 1fr); }
+  .feature-card { grid-template-columns: 36px minmax(0, 1fr) 18px; }
+  .card-head { align-items: flex-start; gap: 10px; }
+  .card-head h3 { overflow-wrap: anywhere; }
+  .content-tabs { gap: 6px; margin-inline: calc(-1 * var(--noor-page-gutter)); padding-inline: var(--noor-page-gutter); }
+  .content-tabs button { min-height: 46px; }
+  .daily-grid, .quran-slot-list, .architecture-grid, .architecture-strip, .daily-focus { grid-template-columns: minmax(0, 1fr); }
+  .reader-toolbar { top: calc(var(--noor-header-base) + env(safe-area-inset-top)); }
+  .reader-controls, .reader-tuning, .reader-search-row, .toolbar-row { width: 100%; align-items: stretch; }
+  .reader-controls > *, .reader-tuning > *, .reader-search-row > *, .toolbar-row > * { min-width: 0; }
+  .premium-hero { flex-direction: column; align-items: stretch; min-height: 0; }
+  .hero-stat { width: 100%; }
+  .premium-arabic { font-size: clamp(24px, 7vw, 34px); }
+  .product-nav button { font-size: 10px; }
+  .product-nav button span { font-size: 18px; }
+  .product-more-menu { width: 100%; border-radius: 18px 18px 14px 14px; }
+  .phase2-overlay .content-page { padding-top: 18px; }
+  .phase3b-page, .phase3c-page, .phase3-page { padding-top: 18px; }
+  .mosque-overlay { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+}
+
+@media (max-width: 380px) {
+  .page { padding-inline: 12px; }
+  .product-nav button { font-size: 9px; }
+  .product-nav button span { font-size: 17px; }
+  .next-card strong { font-size: 17px; }
+  .countdown span { font-size: 22px; }
+  .card { padding: 16px; }
+}
+
+@media (hover: none) {
+  button:hover { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
