@@ -53,8 +53,9 @@ button { touch-action: manipulation; }
 .reader-toolbar { top: calc(var(--noor-header-base) + env(safe-area-inset-top) + 58px); z-index: 5; }
 .experience-toast { top: calc(env(safe-area-inset-top) + 8px); }
 
-/* Feature overlays must fully own the viewport while open, so the underlying shell cannot show through. */
+/* Feature overlays fully own the viewport while open, so the underlying shell cannot show through. */
 .phase2-overlay,
+.phase23-overlay,
 .phase3-overlay,
 .phase3b-overlay,
 .phase3c-overlay,
@@ -70,16 +71,21 @@ button { touch-action: manipulation; }
   padding-bottom: env(safe-area-inset-bottom);
 }
 .phase2-overlay .content-page,
+.phase23-overlay .content-page,
 .phase3-overlay .page,
 .phase3b-overlay .page,
 .phase3c-overlay .page { min-height: calc(100dvh - env(safe-area-inset-top)); }
 
-/* Development/provider text is kept in code/data for diagnostics, not presented as product chrome. */
+/* Internal/provider details stay available to the implementation but not as product chrome. */
 .phase3-page .footnote,
 .phase3b-page .footnote,
 .phase3c-page .footnote,
+.phase3c-page .p3c-warning,
+.phase3c-page .p3c-source div,
+.phase3c-page .p3c-honesty,
 .status-pill { display: none !important; }
 .app > main > .page > .empty-panel:not([role="alert"]) { display: none; }
+.phase3d-launcher { display: none !important; }
 .origin-chip { font-size: 0; }
 .origin-chip::before { content: "Location selected"; font-size: 12px; }
 .origin-chip button { font-size: 12px; }
@@ -111,7 +117,8 @@ button { touch-action: manipulation; }
   .product-nav button { font-size: 10px; }
   .product-nav button span { font-size: 18px; }
   .product-more-menu { width: 100%; border-radius: 18px 18px 14px 14px; }
-  .phase2-overlay .content-page { padding-top: 18px; }
+  .phase2-overlay .content-page,
+  .phase23-overlay .content-page,
   .phase3b-page, .phase3c-page, .phase3-page { padding-top: 18px; }
   .mosque-overlay { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 }
