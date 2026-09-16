@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 type NavItem = { label: string; icon: string; selector: string; view?: string }
 
@@ -47,21 +47,33 @@ function activate(item: NavItem) {
   document.querySelector<HTMLButtonElement>(item.selector)?.click()
 }
 
+function viewKeyFromHash() {
+  const hash = location.hash.replace(/^#/, '')
+  return hash || 'home'
+}
+
 export default function ProductNav() {
   const [moreOpen, setMoreOpen] = useState(false)
+  const [active, setActive] = useState(viewKeyFromHash)
   const onClick = useCallback((item: NavItem) => {
     setMoreOpen(false)
+    setActive(item.view || item.label.toLowerCase())
     activate(item)
   }, [])
+  useEffect(() => {
+    const onPop = () => setActive(viewKeyFromHash())
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
   return <>
-    {moreOpen && <div className="product-more-panel" role="dialog" aria-label="More NoorTools features" onClick={() => setMoreOpen(false)}>
+    {moreOpen && <div className="product-more-panel" role="dialog" aria-modal="true" aria-label="More NoorTools features" onClick={() => setMoreOpen(false)}>
       <div id="noortools-more-menu" className="product-more-menu" onClick={event => event.stopPropagation()}>
         <div className="product-more-head"><strong>More</strong><button type="button" onClick={() => setMoreOpen(false)} aria-label="Close more menu">×</button></div>
         {more.map(item => <button key={item.label} type="button" onClick={() => onClick(item)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}
       </div>
     </div>}
     <nav className="bottom-nav product-nav" aria-label="Primary navigation">
-      {primary.map(item => <button key={item.label} type="button" onClick={() => onClick(item)} aria-label={item.label}>
+      {primary.map(item => <button key={item.label} type="button" onClick={() => onClick(item)} aria-label={item.label} aria-current={active === (item.view || item.label.toLowerCase()) ? 'page' : undefined}>
         <span aria-hidden="true">{item.icon}</span>{item.label}
       </button>)}
       <button type="button" onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen} aria-controls="noortools-more-menu" aria-label="More features">
