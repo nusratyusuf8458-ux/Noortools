@@ -1,5 +1,6 @@
 /* Phase 3G: user-facing mobile shell; internal launch controls stay mounted for compatibility but are not visible. */
 .phase2-launcher,.phase23-launcher,.phase3-launcher,.phase3b-launcher,.phase3c-launcher,.phase3e-launcher,.global-search-launcher,.mosque-launcher{display:none!important}
+.app>.bottom-nav{display:none!important}
 .offline-banner{font-size:0;text-align:center;padding:7px 12px}
 .offline-banner::before{content:"You're offline. Local content remains available.";font-size:13px}
 .phase2-overlay .back h1{font-size:0}
