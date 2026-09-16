@@ -1,0 +1,13 @@
+/* Phase 3G: user-facing mobile shell; internal launch controls stay mounted for compatibility but are not visible. */
+.phase2-launcher,.phase23-launcher,.phase3-launcher,.phase3b-launcher,.phase3c-launcher,.phase3e-launcher,.global-search-launcher,.mosque-launcher{display:none!important}
+.offline-banner{font-size:0;text-align:center;padding:7px 12px}
+.offline-banner::before{content:"You're offline. Local content remains available.";font-size:13px}
+.phase2-overlay .back h1{font-size:0}
+.phase2-overlay .back h1::after{content:"Verified Quran resources";font-size:30px}
+.phase3-page .back .eyebrow,.phase3b-page .back .eyebrow,.phase3c-page .back .eyebrow,.phase3e-panel>header .eyebrow{display:none}
+.phase3e-panel{max-width:1180px;margin:0 auto}
+.product-nav{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
+.product-nav button{min-height:64px;min-width:64px}
+.product-nav button span{line-height:1}
+@media (prefers-reduced-motion:reduce){button{transition:none!important}.product-nav button:hover{transform:none}}
+@media (max-width:480px){.product-nav button{min-width:56px;font-size:10px}.product-nav button span{font-size:18px}}
