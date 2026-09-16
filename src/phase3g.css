@@ -1,0 +1,19 @@
+/* Phase 3G: user-facing mobile shell; internal launch controls stay mounted for compatibility but are not visible. */
+.phase2-launcher,.phase23-launcher,.phase3-launcher,.phase3b-launcher,.phase3c-launcher,.phase3e-launcher,.global-search-launcher,.mosque-launcher{display:none!important}
+.app>.bottom-nav{display:none!important}
+.offline-banner{font-size:0;text-align:center;padding:7px 12px}
+.offline-banner::before{content:"You're offline. Local content remains available.";font-size:13px}
+.phase2-overlay .back h1{font-size:0}
+.phase2-overlay .back h1::after{content:"Verified Quran resources";font-size:30px}
+.phase3-page .back .eyebrow,.phase3b-page .back .eyebrow,.phase3c-page .back .eyebrow,.phase3e-panel>header .eyebrow{display:none}
+.phase3e-panel{max-width:1180px;margin:0 auto}
+.product-nav{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
+.product-nav button{min-height:64px;min-width:64px}
+.product-nav button span{line-height:1}
+.product-more-panel{position:fixed;inset:0 0 72px;background:rgba(15,28,26,.26);z-index:25;display:flex;align-items:flex-end;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
+.product-more-menu{width:min(560px,100%);background:var(--surface,#fff);border:1px solid var(--line,#e2e7e2);border-radius:22px;padding:12px;box-shadow:0 18px 50px rgba(22,49,46,.18)}
+.product-more-head{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 8px}
+.product-more-menu>button{width:100%;display:flex;align-items:center;gap:12px;text-align:left;margin:4px 0;padding:12px 14px}
+.product-more-menu>button span{width:32px;text-align:center}
+@media (prefers-reduced-motion:reduce){button{transition:none!important}.product-nav button:hover{transform:none}}
+@media (max-width:480px){.product-nav button{min-width:56px;font-size:10px}.product-nav button span{font-size:18px}.product-more-panel{inset:0 0 72px;padding:10px}.product-more-menu{border-radius:18px}}

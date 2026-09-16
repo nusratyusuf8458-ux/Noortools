@@ -70,6 +70,22 @@ export async function registerNativeAppLifecycle(onState: (isActive: boolean) =>
   return App.addListener('appStateChange', ({ isActive }) => onState(isActive))
 }
 
+export async function registerNativeBackButton() {
+  if (!isAndroidRuntime()) return null
+  return App.addListener('backButton', ({ canGoBack }) => {
+    const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
+    const dialog = dialogs.at(-1)
+    if (dialog) {
+      const close = dialog.querySelector<HTMLButtonElement>('.back button, button[aria-label^="Close"], button[aria-label*="Close"]')
+      if (close) {
+        close.click()
+        return
+      }
+    }
+    if (canGoBack || history.length > 1) history.back()
+  })
+}
+
 export async function registerKeyboardVisibility(onVisibleChange: (visible: boolean) => void) {
   if (!isNativeRuntime()) return null
   const show = await Keyboard.addListener('keyboardDidShow', () => onVisibleChange(true))
