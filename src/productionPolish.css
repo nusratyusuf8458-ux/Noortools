@@ -63,6 +63,8 @@ button { touch-action: manipulation; }
 .origin-chip button { font-size: 12px; }
 .offline-banner { font-size: 0; }
 .offline-banner::before { content: "Offline mode: saved local features continue to work."; font-size: 12px; }
+.search-experience .source-line, .search-experience .search-results .card-head > .muted { display: none !important; }
+.search-experience .search-result-card:has(.status-pill) { display: none !important; }
 
 @media (max-width: 760px) {
   :root { --noor-page-gutter: 14px; }
