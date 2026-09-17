@@ -73,25 +73,30 @@ jobs:
         run: node -e "import('./scripts/prepare-android.mjs')"
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug --no-daemon
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-noortools-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Emulator route / viewport / navigation UI QA
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ANDROID_QA_OUT: /tmp/noortools-ui-qa
           ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: 5
         with:
-          api-level: 29
-          target: default
-          arch: x86
-          profile: pixel_2
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
           force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-load -no-snapshot-save -camera-back none -camera-front none
           emulator-boot-timeout: 300
           disable-animations: true
           script: |
             set -eu
             mkdir -p /tmp/noortools-ui-qa
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            timeout 300s node scripts/android-ui-smoke.mjs
+            timeout 600s node scripts/android-ui-smoke.mjs
       - name: Capture final Android logs
         if: ${{ always() }}
         run: |
