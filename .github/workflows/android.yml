@@ -91,12 +91,7 @@ jobs:
             set -eu
             mkdir -p /tmp/noortools-ui-qa
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            timeout 300s node scripts/android-ui-smoke.mjs
-      - name: Capture final Android logs
-        if: ${{ always() }}
-        run: |
-          mkdir -p /tmp/noortools-ui-qa
-          adb -s emulator-5554 logcat -d -t 1200 > /tmp/noortools-ui-qa/runner-logcat.txt 2>&1 || true
+            timeout --kill-after=10s 300s node scripts/android-ui-smoke.mjs
       - name: Upload Android UI QA evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
