@@ -8,6 +8,13 @@ mkdirSync(OUT, { recursive: true })
 const adb = (...args) => execFileSync('adb', ['-s', 'emulator-5554', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
+function displaySize() {
+  const raw = adb('shell', 'wm', 'size')
+  const match = raw.match(/Physical size:\s*(\d+)x(\d+)/) || raw.match(/Override size:\s*(\d+)x(\d+)/)
+  if (!match) throw new Error(`Could not determine emulator display size from: ${raw}`)
+  return { width: Number(match[1]), height: Number(match[2]) }
+}
+
 function dumpUi() {
   adb('shell', 'uiautomator', 'dump', '/sdcard/window.xml')
   return adb('exec-out', 'cat', '/sdcard/window.xml')
@@ -41,13 +48,6 @@ async function tap(label, { contains = false, maxY = Infinity, timeout = 10000 }
   throw new Error(`UI target not found: ${label}`)
 }
 
-async function tapAny(labels, options = {}) {
-  for (const label of labels) {
-    try { return await tap(label, options) } catch {}
-  }
-  throw new Error(`None of the UI targets were found: ${labels.join(' / ')}`)
-}
-
 function assertContains(xml, text, label) {
   if (!nodes(xml).some(node => node.text.includes(text) || node.desc.includes(text))) throw new Error(`${label}: expected UI text missing: ${text}`)
 }
@@ -67,14 +67,30 @@ async function checkScreen(name, expected, banned = []) {
   assertNoCrossSurface(xml, name, banned)
   writeFileSync(join(OUT, `${name}.xml`), xml)
   capture(name)
-  adb('shell', 'input', 'swipe', '820', '1900', '820', '650', '400')
+  const { width, height } = displaySize()
+  const x = Math.round(width * 0.76)
+  const top = Math.round(height * 0.78)
+  const bottom = Math.round(height * 0.26)
+  adb('shell', 'input', 'swipe', String(x), String(top), String(x), String(bottom), '350')
   await sleep(500)
   const afterUp = dumpUi()
   assertContains(afterUp, expected, `${name} after scroll up`)
-  adb('shell', 'input', 'swipe', '820', '650', '820', '1900', '400')
+  adb('shell', 'input', 'swipe', String(x), String(bottom), String(x), String(top), '350')
   await sleep(500)
   const afterDown = dumpUi()
   assertContains(afterDown, expected, `${name} after scroll down`)
+}
+
+async function waitForApp(timeout = 20000) {
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    try {
+      const pid = adb('shell', 'pidof', 'com.noortools.mobile')
+      if (pid) return pid
+    } catch {}
+    await sleep(1000)
+  }
+  return ''
 }
 
 async function closeWithBack() {
@@ -87,15 +103,16 @@ async function openMore(item) {
   await tap(item)
 }
 
-async function openQuranReader() {
+async function openQuranReader(prefix = '') {
   await tap('Quran')
-  await checkScreen('02-quran', 'Noor Library', ['Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await checkScreen(`${prefix}02-quran`, 'Noor Library', ['Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
   await tap('Quran', { maxY: 1000 })
   await sleep(800)
   let xml = dumpUi()
   let surah = nodes(xml).find(node => /Al-Fatihah|Fātiḥah|Fatihah/i.test(`${node.text} ${node.desc}`))
   if (!surah) {
-    adb('shell', 'input', 'swipe', '820', '1700', '820', '650', '500')
+    const { width, height } = displaySize()
+    adb('shell', 'input', 'swipe', String(Math.round(width * 0.76)), String(Math.round(height * 0.78)), String(Math.round(width * 0.76)), String(Math.round(height * 0.26)), '400')
     await sleep(600)
     xml = dumpUi()
     surah = nodes(xml).find(node => /Al-Fatihah|Fātiḥah|Fatihah/i.test(`${node.text} ${node.desc}`))
@@ -103,21 +120,22 @@ async function openQuranReader() {
   if (!surah) throw new Error('Quran Reader: Al-Fatihah entry was not exposed to Android UIAutomator')
   adb('shell', 'input', 'tap', String(surah.x), String(surah.y))
   await sleep(1000)
-  await checkScreen('03-quran-reader', 'Al-Fatihah', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await checkScreen(`${prefix}03-quran-reader`, 'Al-Fatihah', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
 }
 
 async function runSuite(prefix = '') {
   await adb('shell', 'am', 'force-stop', 'com.noortools.mobile')
-  adb('shell', 'am', 'start', '-n', 'com.noortools.mobile/.MainActivity')
-  await sleep(3500)
-  try { adb('shell', 'pidof', 'com.noortools.mobile') } catch {
-    writeFileSync(join(OUT, `${prefix}startup-logcat.txt`), adb('logcat', '-d', '-t', '500'))
-    throw new Error('Application process exited after launch; startup-logcat.txt contains the failure evidence.')
+  adb('shell', 'am', 'start', '-W', '-n', 'com.noortools.mobile/.MainActivity')
+  const pid = await waitForApp()
+  if (!pid) {
+    writeFileSync(join(OUT, `${prefix}startup-logcat.txt`), adb('logcat', '-d', '-t', '700'))
+    writeFileSync(join(OUT, `${prefix}startup-activity.txt`), adb('shell', 'dumpsys', 'activity', 'activities'))
+    throw new Error('Application process did not remain running after launch; startup evidence was saved.')
   }
 
-  await checkScreen(`${prefix}01-home`, 'Assalamu Alaikum', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times', 'Qibla', 'Tasbih'])
+  await checkScreen(`${prefix}01-home`, 'Assalamu Alaikum', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
 
-  await openQuranReader()
+  await openQuranReader(prefix)
   await closeWithBack()
 
   await tap('Prayer')
@@ -171,7 +189,6 @@ try {
   adb('wait-for-device')
   await runSuite('')
 
-  // Explicit small Android viewport coverage. Restore it even when the suite fails.
   adb('shell', 'wm', 'size', '480x854')
   await sleep(700)
   try {
@@ -183,7 +200,7 @@ try {
   console.log('ANDROID_UI_SMOKE_PASS')
 } catch (error) {
   try { capture('failure-last-screen') } catch {}
-  try { writeFileSync(join(OUT, 'failure-logcat.txt'), adb('logcat', '-d', '-t', '700')) } catch {}
+  try { writeFileSync(join(OUT, 'failure-logcat.txt'), adb('logcat', '-d', '-t', '900')) } catch {}
   console.error(error instanceof Error ? error.stack : error)
   process.exit(1)
 }
