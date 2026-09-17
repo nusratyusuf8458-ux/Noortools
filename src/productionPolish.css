@@ -54,13 +54,15 @@ button { touch-action: manipulation; }
 
 /* Provider/review implementation details stay in data, never in product chrome. */
 .phase3-page .footnote, .phase3b-page .footnote, .phase3c-page .footnote, .phase3c-page .p3c-warning, .phase3c-page .p3c-source, .phase3c-page .p3c-honesty, .phase3e-panel .footnote, .phase3e-panel .phase3e-meta, .status-pill { display: none !important; }
-.phase3-page .back .eyebrow, .phase3b-page .back .eyebrow, .phase3c-page .back .eyebrow, .phase3e-panel > header .eyebrow { display: none !important; }
+.phase3-page .back .eyebrow, .phase3b-page .back .eyebrow, .phase3c-page .back .eyebrow, .phase3e-panel > header .eyebrow, .content-page .back .eyebrow { display: none !important; }
 .phase3d-launcher { display: none !important; }
 .phase2-launcher, .phase23-launcher, .phase3-launcher, .phase3b-launcher, .phase3c-launcher, .phase3e-launcher, .global-search-launcher, .mosque-launcher { display: none !important; }
 .app > main > .page > .empty-panel:not([role="alert"]) { display: none; }
 .origin-chip { font-size: 0; }
 .origin-chip::before { content: "Location selected"; font-size: 12px; }
 .origin-chip button { font-size: 12px; }
+.offline-banner { font-size: 0; }
+.offline-banner::before { content: "Offline mode: saved local features continue to work."; font-size: 12px; }
 
 @media (max-width: 760px) {
   :root { --noor-page-gutter: 14px; }
