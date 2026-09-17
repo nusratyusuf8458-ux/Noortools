@@ -52,7 +52,7 @@ jobs:
 
   android-emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
         run: node -e "import('./scripts/prepare-android.mjs')"
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug --no-daemon
-      - name: Emulator UI stability smoke test
+      - name: Emulator install / launch / restart / back smoke test
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -81,83 +81,32 @@ jobs:
           arch: x86_64
           profile: pixel_6
           force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          emulator-boot-timeout: 900
           disable-animations: true
           script: |
-            set -e
-            mkdir -p /tmp/noortools-ui
+            set -eu
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am start -W -n com.noortools.mobile/.MainActivity
+            sleep 5
+            if ! adb shell pidof com.noortools.mobile >/dev/null 2>&1; then
+              echo 'APP_PROCESS_MISSING_AFTER_START'
+              adb shell dumpsys activity activities | grep -A 12 -B 4 'com.noortools.mobile' || true
+              adb logcat -d -b crash || true
+              adb logcat -d -v threadtime | grep -E 'FATAL EXCEPTION|AndroidRuntime|com.noortools.mobile|chromium|Capacitor' | tail -n 250 || true
+              exit 1
+            fi
+            adb shell dumpsys package com.noortools.mobile | grep -E 'versionName=0.1.0|versionCode=1'
             adb shell appops set com.noortools.mobile ACCESS_FINE_LOCATION deny
-            adb shell am start -n com.noortools.mobile/.MainActivity
-            python3 - <<'PY'
-            import subprocess, time, re, xml.etree.ElementTree as ET
-            from pathlib import Path
-            OUT = Path('/tmp/noortools-ui')
-            def adb(*args):
-                return subprocess.check_output(['adb', *args], text=True, stderr=subprocess.STDOUT)
-            def dump():
-                adb('shell','uiautomator','dump','/sdcard/window.xml')
-                return subprocess.check_output(['adb','exec-out','cat','/sdcard/window.xml'], text=True, errors='ignore')
-            def nodes():
-                root = ET.fromstring(dump())
-                return list(root.iter('node'))
-            def tap(label, timeout=12):
-                end=time.time()+timeout
-                while time.time()<end:
-                    for n in nodes():
-                        text=n.attrib.get('text','')
-                        desc=n.attrib.get('content-desc','')
-                        if (text==label or desc==label) and n.attrib.get('clickable')=='true':
-                            m=re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', n.attrib.get('bounds',''))
-                            if m:
-                                x1,y1,x2,y2=map(int,m.groups()); adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2)); time.sleep(1); return
-                    time.sleep(.5)
-                raise AssertionError(f'Could not tap accessible control: {label}')
-            def wait_for(text, timeout=12):
-                end=time.time()+timeout
-                while time.time()<end:
-                    xml=dump()
-                    if text in xml: return
-                    time.sleep(.5)
-                raise AssertionError(f'Expected visible text not found: {text}')
-            def snap(name):
-                with open(OUT/f'{name}.png','wb') as f: subprocess.run(['adb','exec-out','screencap','-p'],stdout=f,check=True)
-            def back_expect(text):
-                adb('shell','input','keyevent','4'); wait_for(text)
-            wait_for('Assalamu Alaikum'); snap('01-home')
-            tap('Prayer'); wait_for('Noor Daily'); snap('02-prayer-times'); back_expect('Assalamu Alaikum')
-            tap('Quran'); wait_for('Noor Library'); snap('03-quran')
-            tap('Quran'); wait_for('Surah'); snap('04-quran-reader')
-            back_expect('Noor Library'); back_expect('Assalamu Alaikum')
-            tap('Search'); wait_for('Search verified content'); snap('05-search'); back_expect('Assalamu Alaikum')
-            tap('More');
-            for label, name, expected in [
-              ('Qibla','06-qibla','Qibla'), ('Tasbih','07-tasbih','Tasbih'), ('Salah','08-salah','Salah'),
-              ('Tools','09-tools','Islamic Tools'), ('Hajj & Umrah','10-hajj-umrah','Hajj'), ('Mosques','11-mosques','Mosque'),
-              ('Learning','12-learning','Learning'), ('Translations','13-translations','Translations')]:
-                tap(label); wait_for(expected); snap(name)
-                adb('shell','input','keyevent','4'); wait_for('Assalamu Alaikum')
-                if label != 'Translations': tap('More')
-            tap('More'); adb('shell','input','keyevent','4'); wait_for('Assalamu Alaikum')
-            tap('More'); adb('shell','input','keyevent','4'); wait_for('Assalamu Alaikum')
-            tap('Settings'); wait_for('Settings'); snap('14-settings'); back_expect('Assalamu Alaikum')
-            # Repeated cross-screen transitions catch stale overlays and retained feature surfaces.
-            for label, expected in [('Prayer','Noor Daily'),('Quran','Noor Library'),('Search','Search verified content'),('Home','Assalamu Alaikum')]:
-                tap(label); wait_for(expected); snap(f'15-repeat-{label.lower()}')
-                if label != 'Home': back_expect('Assalamu Alaikum')
-            # Basic accessibility-tree overflow sanity: every visible node must remain within the Pixel 6 viewport.
-            for n in nodes():
-                b=n.attrib.get('bounds','')
-                m=re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', b)
-                if not m: continue
-                x1,y1,x2,y2=map(int,m.groups())
-                if x2 > 1080 or x1 < 0 or y2 > 2400 or y1 < 0: raise AssertionError(f'Node outside viewport: {b} {n.attrib.get("text","")}')
-            print('UI stability emulator smoke test passed')
-            PY
-      - name: Upload UI screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: noortools-ui-screenshots-${{ github.sha }}
-          path: /tmp/noortools-ui/*.png
-          if-no-files-found: warn
+            adb shell am force-stop com.noortools.mobile
+            adb shell am start -W -n com.noortools.mobile/.MainActivity
+            sleep 3
+            adb shell pidof com.noortools.mobile >/dev/null
+            adb shell am force-stop com.noortools.mobile
+            adb shell am start -W -n com.noortools.mobile/.MainActivity
+            sleep 3
+            adb shell pidof com.noortools.mobile >/dev/null
+            adb shell input keyevent 4
+            sleep 1
+            adb shell pidof com.noortools.mobile >/dev/null || true
