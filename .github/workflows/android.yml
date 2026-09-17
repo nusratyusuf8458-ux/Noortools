@@ -2,7 +2,7 @@ name: NoorTools Android
 
 on:
   push:
-    branches: [phase-3f, phase-3g]
+    branches: [phase-3f, phase-3g, phase-3g-ui-stability]
   pull_request:
     branches: [main, phase-3f, phase-3g]
 
@@ -51,8 +51,8 @@ jobs:
           if-no-files-found: error
 
   android-emulator:
-    runs-on: macos-14
-    timeout-minutes: 35
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,24 +73,29 @@ jobs:
         run: node -e "import('./scripts/prepare-android.mjs')"
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug --no-daemon
-      - name: Emulator install / launch / restart / back smoke test
+      - name: Emulator route / viewport / navigation UI QA
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_QA_OUT: /tmp/noortools-ui-qa
+          ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: 5
         with:
-          api-level: 35
-          target: google_apis
-          arch: arm64-v8a
-          profile: pixel_6
+          api-level: 29
+          target: default
+          arch: x86
+          profile: pixel_2
           force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          emulator-boot-timeout: 300
           disable-animations: true
           script: |
+            set -eu
+            mkdir -p /tmp/noortools-ui-qa
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell pidof com.noortools.mobile
-            adb shell dumpsys package com.noortools.mobile | grep -E 'versionName=0.1.0|versionCode=1'
-            adb shell appops set com.noortools.mobile ACCESS_FINE_LOCATION deny
-            adb shell am force-stop com.noortools.mobile
-            adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell am force-stop com.noortools.mobile
-            adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell input keyevent 4
+            timeout --kill-after=10s 300s node scripts/android-ui-smoke.mjs
+      - name: Upload Android UI QA evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: noortools-android-ui-qa-${{ github.sha }}
+          path: /tmp/noortools-ui-qa/
+          if-no-files-found: warn
