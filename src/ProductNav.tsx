@@ -20,10 +20,17 @@ const more: NavItem[] = [
   { label: 'Translations', icon: '文', selector: '.phase23-launcher' },
 ]
 
+const overlaySelectors = [
+  '.phase2-overlay', '.phase23-overlay', '.phase3-overlay', '.phase3b-overlay',
+  '.phase3c-overlay', '.phase3e-overlay', '.mosque-overlay', '.search-experience',
+]
+
 function closeDialogs() {
-  const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
-  for (const dialog of dialogs.reverse()) {
-    const close = dialog.querySelector<HTMLButtonElement>('.back button, button[aria-label^="Close"], button[aria-label*="Close"]')
+  const overlays = Array.from(document.querySelectorAll<HTMLElement>(overlaySelectors.join(',')))
+  for (const overlay of overlays.reverse()) {
+    const close = overlay.querySelector<HTMLButtonElement>(
+      '.back button, .mosque-header > button, .search-header > button, .back-link, button[aria-label*="Close"], button[aria-label*="close"]',
+    )
     close?.click()
   }
 }
@@ -36,11 +43,10 @@ function navigateView(view: string) {
 
 function activate(item: NavItem) {
   if (item.view) {
-    if (item.view === 'home') {
-      closeDialogs()
-      history.replaceState({ view: 'home' }, '', location.pathname + location.search)
-      window.dispatchEvent(new PopStateEvent('popstate', { state: { view: 'home' } }))
-    } else navigateView(item.view)
+    closeDialogs()
+    if (item.view === 'home') history.replaceState({ view: 'home' }, '', location.pathname + location.search)
+    else history.pushState({ view: item.view }, '', `#${item.view}`)
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { view: item.view } }))
     return
   }
   closeDialogs()
