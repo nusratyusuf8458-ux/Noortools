@@ -51,7 +51,7 @@ jobs:
           if-no-files-found: error
 
   android-emulator:
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - name: Checkout
@@ -78,7 +78,7 @@ jobs:
         with:
           api-level: 35
           target: google_apis
-          arch: arm64-v8a
+          arch: x86_64
           profile: pixel_6
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
