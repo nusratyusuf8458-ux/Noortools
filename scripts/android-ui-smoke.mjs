@@ -6,6 +6,7 @@ const OUT = process.env.ANDROID_QA_OUT || 'artifacts/android-ui'
 mkdirSync(OUT, { recursive: true })
 
 const adb = (...args) => execFileSync('adb', ['-s', 'emulator-5554', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+const adbBounded = (timeout, ...args) => execFileSync('adb', ['-s', 'emulator-5554', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout }).trim()
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 function displaySize() {
@@ -58,7 +59,7 @@ function assertNoCrossSurface(xml, label, banned) {
 }
 
 function capture(name) {
-  execFileSync('bash', ['-lc', `adb -s emulator-5554 exec-out screencap -p > "$1"`, '--', join(OUT, `${name}.png`)], { stdio: 'inherit' })
+  execFileSync('bash', ['-lc', `adb -s emulator-5554 exec-out screencap -p > "$1"`, '--', join(OUT, `${name}.png`)], { stdio: 'inherit', timeout: 10000 })
 }
 
 async function checkScreen(name, expected, banned = []) {
@@ -128,8 +129,8 @@ async function runSuite(prefix = '') {
   adb('shell', 'am', 'start', '-W', '-n', 'com.noortools.mobile/.MainActivity')
   const pid = await waitForApp()
   if (!pid) {
-    writeFileSync(join(OUT, `${prefix}startup-logcat.txt`), adb('logcat', '-d', '-t', '700'))
-    writeFileSync(join(OUT, `${prefix}startup-activity.txt`), adb('shell', 'dumpsys', 'activity', 'activities'))
+    writeFileSync(join(OUT, `${prefix}startup-logcat.txt`), adbBounded(5000, 'logcat', '-d', '-t', '700'))
+    writeFileSync(join(OUT, `${prefix}startup-activity.txt`), adbBounded(5000, 'shell', 'dumpsys', 'activity', 'activities'))
     throw new Error('Application process did not remain running after launch; startup evidence was saved.')
   }
 
@@ -200,7 +201,7 @@ try {
   console.log('ANDROID_UI_SMOKE_PASS')
 } catch (error) {
   try { capture('failure-last-screen') } catch {}
-  try { writeFileSync(join(OUT, 'failure-logcat.txt'), adb('logcat', '-d', '-t', '900')) } catch {}
+  try { writeFileSync(join(OUT, 'failure-logcat.txt'), adbBounded(5000, 'logcat', '-d', '-t', '900')) } catch {}
   console.error(error instanceof Error ? error.stack : error)
   process.exit(1)
 }
