@@ -2,7 +2,7 @@ name: NoorTools Android
 
 on:
   push:
-    branches: [phase-3f, phase-3g]
+    branches: [phase-3f, phase-3g, phase-3g-ui-stability]
   pull_request:
     branches: [main, phase-3f, phase-3g]
 
