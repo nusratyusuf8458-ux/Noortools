@@ -133,7 +133,7 @@ async function runSuite(prefix = '') {
     throw new Error('Application process did not remain running after launch; startup evidence was saved.')
   }
 
-  await checkScreen(`${prefix}01-home`, 'Assalamu Alaikum', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await checkScreen(`${prefix}01-home`, 'Assalamu Alaikum', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Back from Prayer times'])
 
   await openQuranReader(prefix)
   await closeWithBack()
