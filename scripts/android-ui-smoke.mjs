@@ -105,7 +105,7 @@ async function openMore(item) {
 
 async function openQuranReader(prefix = '') {
   await tap('Quran')
-  await checkScreen(`${prefix}02-quran`, 'Noor Library', ['Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await checkScreen(`${prefix}02-quran`, 'Noor Library', ['Verified content search', 'Zakat · Ramadan · Fasting', 'Prayer times'])
   await tap('Quran', { maxY: 1000 })
   await sleep(800)
   let xml = dumpUi()
