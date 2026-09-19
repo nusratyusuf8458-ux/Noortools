@@ -88,17 +88,13 @@ jobs:
           ANDROID_QA_OUT: /tmp/noortools-ui-qa
           ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: 5
         with:
-          api-level: 34
+          api-level: 35
           target: google_apis
           arch: x86_64
-          profile: pixel_7_pro
-          cores: 4
-          ram-size: 4096M
-          disk-size: 4096M
+          profile: pixel_5
           force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-load -no-snapshot-save -camera-back none -camera-front none -accel on
-          emulator-boot-timeout: 600
-          disable-linux-hw-accel: auto
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-load -no-snapshot-save -camera-back none -camera-front none
+          emulator-boot-timeout: 300
           disable-animations: true
           pre-emulator-launch-script: |
             set -eu
