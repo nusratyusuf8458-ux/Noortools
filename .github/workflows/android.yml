@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: noortools-android-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   android-build:
     runs-on: ubuntu-latest
@@ -32,13 +36,13 @@ jobs:
       - name: Prepare Android project
         run: node -e "import('./scripts/prepare-android.mjs')"
       - name: Build debug APK
-        run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace
+        run: cd android && timeout --signal=TERM --kill-after=15s 600s ./gradlew assembleDebug --no-daemon --stacktrace
       - name: Build preview APK
-        run: cd android && ./gradlew assemblePreview --no-daemon --stacktrace
+        run: cd android && timeout --signal=TERM --kill-after=15s 600s ./gradlew assemblePreview --no-daemon --stacktrace
       - name: Build release APK
-        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace
+        run: cd android && timeout --signal=TERM --kill-after=15s 600s ./gradlew assembleRelease --no-daemon --stacktrace
       - name: Build release AAB
-        run: cd android && ./gradlew bundleRelease --no-daemon --stacktrace
+        run: cd android && timeout --signal=TERM --kill-after=15s 600s ./gradlew bundleRelease --no-daemon --stacktrace
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -51,8 +55,8 @@ jobs:
           if-no-files-found: error
 
   android-emulator:
-    runs-on: macos-14
-    timeout-minutes: 35
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,25 +76,99 @@ jobs:
       - name: Prepare Android project
         run: node -e "import('./scripts/prepare-android.mjs')"
       - name: Build debug APK
-        run: cd android && ./gradlew assembleDebug --no-daemon
-      - name: Emulator install / launch / restart / back smoke test
-        uses: reactivecircus/android-emulator-runner@v2
+        run: cd android && timeout --signal=TERM --kill-after=15s 600s ./gradlew assembleDebug --no-daemon
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-noortools-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Emulator route / viewport / navigation UI QA
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          ANDROID_QA_OUT: /tmp/noortools-ui-qa
+          ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: 5
         with:
           api-level: 35
           target: google_apis
-          arch: arm64-v8a
-          profile: pixel_6
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 3072M
+          disk-size: 4096M
           force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-load -no-snapshot-save -camera-back none -camera-front none
+          emulator-boot-timeout: 300
           disable-animations: true
+          pre-emulator-launch-script: |
+            set -eu
+            test -r /dev/kvm
+            test -w /dev/kvm
           script: |
+            set +e
+            mkdir -p /tmp/noortools-ui-qa
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell pidof com.noortools.mobile
-            adb shell dumpsys package com.noortools.mobile | grep -E 'versionName=0.1.0|versionCode=1'
-            adb shell appops set com.noortools.mobile ACCESS_FINE_LOCATION deny
-            adb shell am force-stop com.noortools.mobile
-            adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell am force-stop com.noortools.mobile
-            adb shell am start -n com.noortools.mobile/.MainActivity
-            adb shell input keyevent 4
+            timeout --signal=TERM --kill-after=10s 600s node scripts/android-ui-smoke.mjs
+            qa_status=$?
+            if [ "$qa_status" -ne 0 ]; then
+              echo "UI QA exited with status $qa_status; capturing logcat before emulator-runner teardown."
+              if ! timeout --signal=TERM --kill-after=5s 15s adb -s emulator-5554 logcat -d -t 1200 > /tmp/noortools-ui-qa/pre-teardown-logcat.txt 2>&1; then
+                echo "PRE-TEARDOWN LOGCAT UNAVAILABLE: adb logcat did not complete within 15s." | tee /tmp/noortools-ui-qa/pre-teardown-logcat-diagnostic.txt
+              fi
+            fi
+            exit "$qa_status"
+      - name: Capture final Android logs and cleanup
+        if: ${{ always() }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set +e
+          OUT=/tmp/noortools-ui-qa
+          mkdir -p "$OUT"
+
+          cleanup() {
+            echo "Starting bounded Android cleanup..."
+            if timeout --signal=TERM --kill-after=5s 10s adb -s emulator-5554 shell am force-stop com.noortools.mobile > "$OUT/cleanup-force-stop.txt" 2>&1; then
+              echo "Android app force-stop completed."
+            else
+              echo "ANDROID APP FORCE-STOP UNAVAILABLE: adb shell am force-stop did not complete within 10s." >> "$OUT/cleanup-diagnostic.txt"
+            fi
+            if timeout --signal=TERM --kill-after=5s 10s adb -s emulator-5554 emu kill > "$OUT/cleanup-emulator-kill.txt" 2>&1; then
+              echo "Emulator shutdown command completed."
+            else
+              echo "EMULATOR SHUTDOWN UNAVAILABLE: adb emu kill did not complete within 10s." >> "$OUT/cleanup-diagnostic.txt"
+            fi
+            if timeout --signal=TERM --kill-after=5s 10s adb kill-server > "$OUT/cleanup-adb-kill-server.txt" 2>&1; then
+              echo "ADB server shutdown command completed."
+            else
+              echo "ADB SERVER SHUTDOWN UNAVAILABLE: adb kill-server did not complete within 10s." >> "$OUT/cleanup-diagnostic.txt"
+            fi
+            pkill -TERM -x emulator 2>/dev/null || true
+            pkill -TERM -x qemu-system-x86_64 2>/dev/null || true
+            pkill -TERM -x adb 2>/dev/null || true
+            pkill -TERM -f 'scripts/android-ui-smoke\.mjs' 2>/dev/null || true
+            sleep 2
+            pkill -KILL -x emulator 2>/dev/null || true
+            pkill -KILL -x qemu-system-x86_64 2>/dev/null || true
+            pkill -KILL -x adb 2>/dev/null || true
+            pkill -KILL -f 'scripts/android-ui-smoke\.mjs' 2>/dev/null || true
+            echo "Bounded Android cleanup finished."
+          }
+          trap cleanup EXIT
+          echo "Attempting bounded final log capture..."
+          if timeout --signal=TERM --kill-after=5s 15s adb -s emulator-5554 get-state > "$OUT/final-adb-state.txt" 2>&1; then
+            if timeout --signal=TERM --kill-after=5s 20s adb -s emulator-5554 logcat -d -t 1200 > "$OUT/runner-logcat.txt" 2>&1; then
+              echo "Final Android logcat capture succeeded." | tee "$OUT/final-logcat-diagnostic.txt"
+            else
+              echo "FINAL LOGCAT UNAVAILABLE: adb logcat did not complete within 20s; cleanup will continue." | tee "$OUT/final-logcat-diagnostic.txt"
+            fi
+          else
+            echo "FINAL LOGCAT UNAVAILABLE: emulator/ADB state could not be queried within 15s; cleanup will continue." | tee "$OUT/final-logcat-diagnostic.txt"
+          fi
+      - name: Upload Android UI QA evidence
+        if: ${{ always() }}
+        timeout-minutes: 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: noortools-android-ui-qa-${{ github.sha }}
+          path: /tmp/noortools-ui-qa/
+          if-no-files-found: warn

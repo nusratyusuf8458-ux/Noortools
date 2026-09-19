@@ -23,9 +23,9 @@ export default function Phase3CLauncher(){
  const done=useMemo(()=>state.hajj.completedStepIds.length+state.umrah.completedStepIds.length,[state])
  const add=()=>{try{setState(s=>addChecklist(s,checkLabel));setCheckLabel('');setNotice('Personal checklist item saved locally.')}catch(e){setNotice(e instanceof Error?e.message:'Could not add checklist item.')}}
  return <>
-  <button className="phase3c-launcher" onClick={()=>setOpen(true)} aria-label="Open Phase 3C Hajj and Umrah">3C <span>Hajj · Umrah</span></button>
-  {open&&<div className="phase3c-overlay" role="dialog" aria-modal="true" aria-label="Phase 3C Hajj and Umrah companion"><section className="page phase3c-page">
-   <div className="back"><button onClick={()=>setOpen(false)} aria-label="Close Phase 3C">←</button><div><p className="eyebrow">PHASE 3C</p><h1>Hajj · Umrah Foundation</h1></div></div>
+  <button className="phase3c-launcher" onClick={()=>setOpen(true)} aria-label="Open Hajj and Umrah">Hajj · Umrah</button>
+  {open&&<div className="phase3c-overlay" role="dialog" aria-modal="true" aria-label="Hajj and Umrah companion"><section className="page phase3c-page">
+   <div className="back"><button onClick={()=>setOpen(false)} aria-label="Close Hajj and Umrah">←</button><div><h1>Hajj · Umrah Foundation</h1></div></div>
    <div className="content-tabs" role="tablist" aria-label="Hajj and Umrah sections">{(['hajj','umrah','checklist'] as Section[]).map(x=><button key={x} role="tab" aria-selected={section===x} className={section===x?'selected':''} onClick={()=>setSection(x)}>{x==='hajj'?'Hajj':x==='umrah'?'Umrah':'My Checklist'}</button>)}</div>
    <div className="p3c-honesty"><b>Accuracy boundary:</b> religious instruction is intentionally unavailable until source rights and scholarly review are established. {done>0&&<span>{done} personal step{done===1?'':'s'} marked across both modules.</span>}</div>
    {notice&&<div className="experience-toast" role="status">{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss notice">×</button></div>}

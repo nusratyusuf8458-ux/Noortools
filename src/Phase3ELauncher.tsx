@@ -10,9 +10,9 @@ export default function Phase3ELauncher(){
  const items=useMemo(()=>{const base=query.trim()?searchLearning(query):moduleItems(module); return notesOnly?base.filter(item=>state.notes[item.id]):base},[query,module,notesOnly,state.notes])
  const commit=(next:LearningState)=>{setState(next);saveLearningState(next)}
  const openItem=(item:LearningItem)=>{setSelected(item);commit(markRecent(state,item.id))}
- if(!open)return <button className="phase3e-launcher primary" onClick={()=>setOpen(true)} aria-label="Open Seerah, Prophets and Islamic Learning">3E · Learning</button>
+ if(!open)return <button className="phase3e-launcher primary" onClick={()=>setOpen(true)} aria-label="Open Islamic history and learning">Islamic history & learning</button>
  return <div className="phase3e-overlay" role="dialog" aria-modal="true" aria-label="NoorTools Islamic history and learning"><div className="phase3e-panel" dir="auto">
-  <header className="card-head"><div><p className="eyebrow">NOORTOOLS · PHASE 3E</p><h1>Stories, History & Learning</h1><p className="muted">Only verified, cleared source content can appear as SOURCE CONTENT.</p></div><button onClick={()=>{setOpen(false);setSelected(null)}} aria-label="Close learning">×</button></header>
+  <header className="card-head"><div><p className="eyebrow">NOORTOOLS</p><h1>Stories, History & Learning</h1><p className="muted">Only verified, cleared source content can appear as SOURCE CONTENT.</p></div><button onClick={()=>{setOpen(false);setSelected(null)}} aria-label="Close learning">×</button></header>
   {!selected?<>
    <div className="phase3e-tabs" role="tablist" aria-label="Learning modules">{modules.map(value=><button key={value} className={module===value?'selected':''} role="tab" aria-selected={module===value} onClick={()=>{setModule(value);setQuery('');setNotesOnly(false)}}>{MODULE_LABELS[value]}</button>)}<button className={notesOnly?'selected':''} role="tab" aria-selected={notesOnly} onClick={()=>setNotesOnly(v=>!v)}>Bookmarks / Notes</button></div>
    <div className="search-box"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search verified learning content" aria-label="Search learning content" />{query&&<button type="button" onClick={()=>setQuery('')} aria-label="Clear search">×</button>}</div>

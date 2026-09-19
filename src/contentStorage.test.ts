@@ -81,6 +81,16 @@ describe('Phase-2.4 local content state', () => {
     expect(resetAzkarDay(thrice, date).azkarDaily).toEqual({})
   })
 
+  it('preserves malformed content storage before returning an empty state', () => {
+    const raw = JSON.stringify({ version: 99, bookmarks: { important: { type: 'dua', addedAt: '2026-09-14T00:00:00.000Z' } } })
+    localStorage.setItem('noortools:content:v3', raw)
+    expect(loadContentState().bookmarks).toEqual({})
+    const recovery = JSON.parse(localStorage.getItem('noortools:content:v3:recovery:v1') ?? '{}')
+    expect(recovery.schema).toBe('noortools.storage-recovery')
+    expect(recovery.sourceKey).toBe('noortools:content:v3')
+    expect(recovery.raw).toBe(raw)
+  })
+
   it('migrates v2 state to v3 without inventing user activity', () => {
     localStorage.setItem('noortools:content:v2', JSON.stringify({ version: 2, bookmarks: { bad: { type: 'made-up', addedAt: 3 }, good: { type: 'dua', addedAt: '2026-09-13T00:00:00.000Z' } }, quran: { positions: { 'quran:2': { ayah: 255, updatedAt: '2026-09-13T00:00:00.000Z' } }, lastReadId: 'quran:2' }, itemProgress: { x: { completed: 9, target: 1 } }, azkarDaily: {} }))
     const state = loadContentState()
