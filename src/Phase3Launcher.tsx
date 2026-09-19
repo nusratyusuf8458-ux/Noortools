@@ -95,11 +95,11 @@ export default function Phase3Launcher() {
   const updateAdjustment = (name: keyof PrayerAdjustments, value: string) => updatePrayer({ adjustments: { ...state.prayerSettings.adjustments, [name]: cleanAdjustment(value) } })
 
   return <>
-    <button className="phase3-launcher" onClick={() => setOpen(true)} aria-label="Open Phase 3 Islamic companion">3A <span>Prayer · Calendar · Daily</span></button>
-    {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="NoorTools Phase 3A Islamic companion">
+    <button className="phase3-launcher" onClick={() => setOpen(true)} aria-label="Open Noor Daily">3A <span>Prayer · Calendar · Daily</span></button>
+    {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="Noor Daily">
       <section className="page content-page phase3-page">
-        <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Phase 3A">←</button><div><p className="eyebrow">PHASE 3A</p><h1>Noor Daily</h1></div></div>
-        <div className="content-tabs" role="tablist" aria-label="Phase 3A sections">
+        <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Noor Daily">←</button><div><h1>Noor Daily</h1></div></div>
+        <div className="content-tabs" role="tablist" aria-label="Noor Daily sections">
           {(['dashboard', 'prayer', 'calendar'] as const).map(item => <button key={item} className={section === item ? 'selected' : ''} onClick={() => setSection(item)} role="tab" aria-selected={section === item}>{item === 'dashboard' ? 'Dashboard' : item === 'prayer' ? 'Prayer' : 'Calendar'}</button>)}
         </div>
         {error && <div className="empty-panel" role="alert"><span>!</span><p>{error}</p><button onClick={() => setError('')}>Dismiss</button></div>}
