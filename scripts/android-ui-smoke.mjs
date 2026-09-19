@@ -143,6 +143,8 @@ async function openQuranReader(prefix = '') {
   await tap('Quran Reader', { maxY: 1000 })
   await sleep(800)
   let xml = dumpUi()
+  writeFileSync(join(OUT, `${prefix}03-quran-reader-entry.xml`), xml)
+  capture(`${prefix}03-quran-reader-entry`)
   let surah = nodes(xml).find(node => /Al-Fatihah|Fātiḥah|Fatihah/i.test(`${node.text} ${node.desc}`))
   if (!surah) {
     const { width, height } = displaySize()
