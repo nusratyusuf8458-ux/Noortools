@@ -56,8 +56,10 @@ function assertContains(xml, text, label) {
 }
 
 function assertNoCrossSurface(xml, label, banned) {
-  const found = banned.find(text => nodes(xml).some(node => node.text.includes(text) || node.desc.includes(text)))
-  if (found) throw new Error(`${label}: previous/other surface still visible: ${found}`)
+  for (const node of nodes(xml)) {
+    const found = banned.find(text => node.text.includes(text) || node.desc.includes(text))
+    if (found) throw new Error(`${label}: previous/other surface still visible: ${found}. Node: ${node.raw}`)
+  }
 }
 
 function capture(name) {
@@ -66,6 +68,7 @@ function capture(name) {
 
 async function checkScreen(name, expected, banned = []) {
   const xml = dumpUi()
+  writeFileSync(join(OUT, `${name}-precheck.xml`), xml)
   assertContains(xml, expected, name)
   assertNoCrossSurface(xml, name, banned)
   writeFileSync(join(OUT, `${name}.xml`), xml)
