@@ -89,11 +89,11 @@ jobs:
           ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: 5
         with:
           api-level: 35
-          target: default
+          target: google_apis
           arch: x86_64
-          profile: pixel_5
+          profile: pixel_2
           cores: 4
-          ram-size: 4096M
+          ram-size: 3072M
           disk-size: 4096M
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-load -no-snapshot-save -camera-back none -camera-front none
