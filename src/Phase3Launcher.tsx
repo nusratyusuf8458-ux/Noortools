@@ -95,7 +95,7 @@ export default function Phase3Launcher() {
   const updateAdjustment = (name: keyof PrayerAdjustments, value: string) => updatePrayer({ adjustments: { ...state.prayerSettings.adjustments, [name]: cleanAdjustment(value) } })
 
   return <>
-    <button className="phase3-launcher" onClick={() => setOpen(true)} aria-label="Open Noor Daily">3A <span>Prayer · Calendar · Daily</span></button>
+    <button className="phase3-launcher" onClick={() => setOpen(true)} aria-label="Open Noor Daily">Noor Daily <span>Prayer · Calendar · Daily</span></button>
     {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="Noor Daily">
       <section className="page content-page phase3-page">
         <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Noor Daily">←</button><div><h1>Noor Daily</h1></div></div>
