@@ -33,7 +33,7 @@ export default function Phase23Launcher() {
     <button className="phase23-launcher" onClick={() => setOpen(true)} aria-label="Open Quran translations, Hadith and audio">2.3 <span>Hadith · Translation · Audio</span></button>
     {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="Quran translations, Hadith and audio">
       <section className="page content-page">
-        <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Quran translations, Hadith and audio">←</button><h1>Quran translations &amp; audio</h1></div>
+        <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Quran translations, Hadith and audio">←</button><h1>Quran translations & audio</h1></div>
         <div className="content-tabs" role="tablist" aria-label="Quran translations, Hadith and audio sections">{sections.map(item => <button key={item} className={section === item ? 'selected' : ''} onClick={() => setSection(item)} role="tab" aria-selected={section === item}>{item === 'translation' ? 'Quran Translation' : item === 'hadith' ? 'Hadith' : 'Quran Audio'}</button>)}</div>
         {error && <div className="empty-panel" role="alert"><span>!</span><p>{error}</p></div>}
 
