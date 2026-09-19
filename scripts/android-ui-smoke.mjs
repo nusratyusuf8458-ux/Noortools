@@ -139,6 +139,9 @@ async function runSuite(prefix = '') {
 
   await openQuranReader(prefix)
   await closeWithBack()
+  await tap('Bookmarks', { maxY: 1000 })
+  await checkScreen(`${prefix}02b-quran-bookmarks`, 'Bookmarks & Favorites', ['Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await closeWithBack()
 
   await tap('Prayer')
   await checkScreen(`${prefix}04-prayer`, 'Prayer', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Qibla', 'Tasbih'])
