@@ -141,18 +141,31 @@ async function openQuranReader(prefix = '') {
   await tap('Quran')
   await checkScreen(`${prefix}02-quran`, 'Noor Library', ['Verified content search', 'Zakat · Ramadan · Fasting', 'Prayer times'])
   await tap('Quran Reader', { maxY: 1000 })
-  await sleep(800)
+  await waitForUi('Surah browser')
   let xml = dumpUi()
   writeFileSync(join(OUT, `${prefix}03-quran-reader-entry.xml`), xml)
   capture(`${prefix}03-quran-reader-entry`)
-  let surah = nodes(xml).find(node => /Al-Fatihah|Fātiḥah|Fatihah/i.test(`${node.text} ${node.desc}`))
-  if (!surah) {
-    const { width, height } = displaySize()
-    adb('shell', 'input', 'swipe', String(Math.round(width * 0.76)), String(Math.round(height * 0.78)), String(Math.round(width * 0.76)), String(Math.round(height * 0.26)), '400')
-    await sleep(600)
+
+  const { width, height } = displaySize()
+  const isUsableNode = node => node.x > 0 && node.y > 0 && node.x < width && node.y < height
+  const findAlFatihah = documentXml => nodes(documentXml).find(node =>
+    /^001\s+Al-Faatiha\b/i.test(node.text) &&
+    /class="android\.widget\.Button"/.test(node.raw) &&
+    isUsableNode(node)
+  )
+
+  let surah = findAlFatihah(xml)
+  for (let attempt = 0; !surah && attempt < 6; attempt += 1) {
+    adb('shell', 'input', 'swipe',
+      String(Math.round(width * 0.80)), String(Math.round(height * 0.88)),
+      String(Math.round(width * 0.80)), String(Math.round(height * 0.76)), '300')
+    await sleep(300)
     xml = dumpUi()
-    surah = nodes(xml).find(node => /Al-Fatihah|Fātiḥah|Fatihah/i.test(`${node.text} ${node.desc}`))
+    writeFileSync(join(OUT, `${prefix}03-quran-reader-scan-${attempt + 1}.xml`), xml)
+    if (attempt === 0) capture(`${prefix}03-quran-reader-scan-${attempt + 1}`)
+    surah = findAlFatihah(xml)
   }
+
   if (!surah) throw new Error('Quran Reader: Al-Fatihah entry was not exposed to Android UIAutomator')
   adb('shell', 'input', 'tap', String(surah.x), String(surah.y))
   await sleep(1000)
