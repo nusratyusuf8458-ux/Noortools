@@ -31,10 +31,10 @@ export default function Phase23Launcher() {
 
   return <>
     <button className="phase23-launcher" onClick={() => setOpen(true)} aria-label="Open Quran translations, Hadith and audio">2.3 <span>Hadith · Translation · Audio</span></button>
-    {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="Phase 2.3 verified source library">
+    {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="Quran translations, Hadith and audio">
       <section className="page content-page">
-        <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Phase 2.3">←</button><h1>Phase 2.3</h1></div>
-        <div className="content-tabs" role="tablist" aria-label="Phase 2.3 sections">{sections.map(item => <button key={item} className={section === item ? 'selected' : ''} onClick={() => setSection(item)} role="tab" aria-selected={section === item}>{item === 'translation' ? 'Quran Translation' : item === 'hadith' ? 'Hadith' : 'Quran Audio'}</button>)}</div>
+        <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Quran translations, Hadith and audio">←</button><h1>Quran translations &amp; audio</h1></div>
+        <div className="content-tabs" role="tablist" aria-label="Quran translations, Hadith and audio sections">{sections.map(item => <button key={item} className={section === item ? 'selected' : ''} onClick={() => setSection(item)} role="tab" aria-selected={section === item}>{item === 'translation' ? 'Quran Translation' : item === 'hadith' ? 'Hadith' : 'Quran Audio'}</button>)}</div>
         {error && <div className="empty-panel" role="alert"><span>!</span><p>{error}</p></div>}
 
         {section === 'translation' && <div className="card">
