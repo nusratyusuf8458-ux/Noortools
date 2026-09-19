@@ -38,7 +38,7 @@ export default function Phase3BLauncher() {
  const addGoal=()=>{try{const g=createGoal(goalLabel,Number(goalTarget),goalUnit);setState(s=>({...s,ramadan:{...s.ramadan,goals:[...s.ramadan.goals,g]}}));setGoalLabel('');setGoalTarget('');setMessage('Personal goal saved locally.')}catch(e){setMessage(e instanceof Error?e.message:'Goal could not be saved.')}}
  const saveJournal=()=>{try{setState(s=>({...s,ramadan:{...s.ramadan,journal:upsertJournal(s.ramadan.journal,journalDate,journalText,journalMood,journalTags.split(','))}}));setJournalText('');setJournalMood('');setJournalTags('');setMessage('Journal saved locally as USER CONTENT.')}catch(e){setMessage(e instanceof Error?e.message:'Journal could not be saved.')}}
  return <>
-  <button className="phase3b-launcher" onClick={()=>setOpen(true)} aria-label="Open Zakat, Ramadan and fasting">Zakat · Ramadan · Fasting</button></button>
+  <button className="phase3b-launcher" onClick={()=>setOpen(true)} aria-label="Open Zakat, Ramadan and fasting">Zakat · Ramadan · Fasting</button>
   {open&&<div className="phase3b-overlay" role="dialog" aria-modal="true" aria-label="Zakat, Ramadan and fasting tools"><section className="page phase3b-page">
    <div className="back"><button onClick={()=>setOpen(false)} aria-label="Close Zakat, Ramadan and fasting">←</button><div><h1>Zakat · Ramadan · Fasting</h1></div></div>
    <div className="content-tabs" role="tablist" aria-label="Zakat, Ramadan and fasting sections">{(['dashboard','zakat','fasting','ramadan'] as Section[]).map(x=><button key={x} className={section===x?'selected':''} onClick={()=>setSection(x)} role="tab" aria-selected={section===x}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
