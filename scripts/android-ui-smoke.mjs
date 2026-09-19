@@ -107,9 +107,9 @@ async function waitForUi(label, timeout = 15000) {
     await sleep(250)
   }
   writeFileSync(join(OUT, 'readiness-last-ui.xml'), last)
-  const allNodes = [...last.matchAll(/<node\\b[^>]*\\/>/g)].map(match => match[0])
-  const webViews = allNodes.filter(raw => /class=\"android\\.webkit\\.WebView\"/.test(raw))
-  const visibleNodes = allNodes.filter(raw => /\\bvisible-to-user=\"true\"/.test(raw))
+  const allNodes = [...last.matchAll(/<node\b[^>]*\/>/g)].map(match => match[0])
+  const webViews = allNodes.filter(raw => /class="android\.webkit\.WebView"/.test(raw))
+  const visibleNodes = allNodes.filter(raw => /\bvisible-to-user="true"/.test(raw))
   const diagnostics = {
     label,
     allSelfClosingNodes: allNodes.length,
