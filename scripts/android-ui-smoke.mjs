@@ -114,7 +114,7 @@ async function waitForUi(label, timeout = 15000) {
     label,
     allSelfClosingNodes: allNodes.length,
     visibleNodes: visibleNodes.length,
-    webViewNodes: webViews.length,
+    webViewNodeCount: webViews.length,
     webViewNodes: webViews.slice(0, 20),
   }
   writeFileSync(join(OUT, 'readiness-ui-diagnostics.json'), JSON.stringify(diagnostics, null, 2))
