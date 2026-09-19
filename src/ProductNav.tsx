@@ -71,6 +71,24 @@ export default function ProductNav() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
+
+  useEffect(() => {
+    const root = document.getElementById('root')
+    if (!root) return
+    const syncModalInertness = () => {
+      const modal = root.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]')
+      for (const child of Array.from(root.children)) {
+        child.toggleAttribute('inert', Boolean(modal) && !child.contains(modal))
+      }
+    }
+    syncModalInertness()
+    const observer = new MutationObserver(syncModalInertness)
+    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-modal'] })
+    return () => {
+      observer.disconnect()
+      for (const child of Array.from(root.children)) child.removeAttribute('inert')
+    }
+  }, [])
   return <>
     {moreOpen && <div className="product-more-panel" role="dialog" aria-modal="true" aria-label="More NoorTools features" onClick={() => setMoreOpen(false)}>
       <div id="noortools-more-menu" className="product-more-menu" onClick={event => event.stopPropagation()}>
