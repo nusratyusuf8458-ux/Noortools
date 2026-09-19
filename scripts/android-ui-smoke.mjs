@@ -169,7 +169,7 @@ async function openQuranReader(prefix = '') {
   if (!surah) throw new Error('Quran Reader: Al-Fatihah entry was not exposed to Android UIAutomator')
   adb('shell', 'input', 'tap', String(surah.x), String(surah.y))
   await sleep(1000)
-  await checkScreen(`${prefix}03-quran-reader`, 'Al-Fatihah', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await checkScreen(`${prefix}03-quran-reader`, 'Al-Faatiha', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
 }
 
 async function runSuite(prefix = '') {
