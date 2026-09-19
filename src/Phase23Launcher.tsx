@@ -2,15 +2,25 @@ import { useEffect, useMemo, useState } from 'react'
 import { loadQuranTranslations, searchQuranTranslations, toggleTranslationBookmark, type QuranTranslation } from './quranTranslation'
 import { HADITH_UI_STATE } from './hadith'
 import { AUDIO_UI_STATE } from './quranAudio'
+import { preserveCorruptStorage } from './storageRecovery'
 
 const sections = ['translation', 'hadith', 'audio'] as const
 type Section = typeof sections[number]
 
 function safeBookmarks(): string[] {
+  const key = 'noortools:phase23:translation-bookmarks'
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem('noortools:phase23:translation-bookmarks') || '[]')
-    return Array.isArray(parsed) && parsed.every(item => typeof item === 'string') ? parsed : []
-  } catch { return [] }
+    const raw = localStorage.getItem(key)
+    if (!raw) return []
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) return parsed
+      preserveCorruptStorage(key, raw, 'Translation bookmark data has an invalid structure.')
+    } catch (error) {
+      preserveCorruptStorage(key, raw, error instanceof Error ? error.message : 'Translation bookmark data is not valid JSON.')
+    }
+  } catch {}
+  return []
 }
 
 export default function Phase23Launcher() {
@@ -30,7 +40,7 @@ export default function Phase23Launcher() {
   const surahs = useMemo(() => Array.from(new Set(translations.map(item => item.surah))), [translations])
 
   return <>
-    <button className="phase23-launcher" onClick={() => setOpen(true)} aria-label="Open Quran translations, Hadith and audio">2.3 <span>Hadith · Translation · Audio</span></button>
+    <button className="phase23-launcher" onClick={() => setOpen(true)} aria-label="Open Quran translations, Hadith and audio"Quran translations <span>Hadith · Translation · Audio</span></button>
     {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="Quran translations, Hadith and audio">
       <section className="page content-page">
         <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Quran translations, Hadith and audio">←</button><h1>Quran translations & audio</h1></div>
