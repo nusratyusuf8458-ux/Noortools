@@ -95,6 +95,20 @@ async function waitForApp(timeout = 20000) {
   return ''
 }
 
+async function waitForUi(label, timeout = 15000) {
+  const start = Date.now()
+  let last = ''
+  while (Date.now() - start < timeout) {
+    try {
+      const xml = dumpUi()
+      if (nodes(xml).some(node => node.text === label || node.desc === label)) return
+      last = xml
+    } catch {}
+    await sleep(250)
+  }
+  throw new Error(`Timed out waiting for UI readiness: ${label}. Last UI snapshot: ${last.slice(0, 2500)}`)
+}
+
 async function closeWithBack() {
   adb('shell', 'input', 'keyevent', '4')
   await sleep(700)
@@ -134,6 +148,8 @@ async function runSuite(prefix = '') {
     writeFileSync(join(OUT, `${prefix}startup-activity.txt`), adb('shell', 'dumpsys', 'activity', 'activities'))
     throw new Error('Application process did not remain running after launch; startup evidence was saved.')
   }
+
+  await waitForUi('NoorTools home ready')
 
   await checkScreen(`${prefix}01-home`, 'Assalamu Alaikum', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Back from Prayer times'])
 
