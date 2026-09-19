@@ -21,7 +21,10 @@ function dumpUi() {
 }
 
 function nodes(xml) {
-  return [...xml.matchAll(/<node\b[^>]*\/>/g)].filter(match => /\bvisible-to-user="true"/.test(match[0])).map(match => {
+  return [...xml.matchAll(/<node\b[^>]*\/>/g)].filter(match => {
+    const visibility = match[0].match(/\bvisible-to-user="(true|false)"/)?.[1]
+    return visibility !== 'false'
+  }).map(match => {
     const raw = match[0]
     const text = raw.match(/\btext="([^"]*)"/)?.[1] || ''
     const desc = raw.match(/\bcontent-desc="([^"]*)"/)?.[1] || ''
@@ -159,7 +162,7 @@ async function runSuite(prefix = '') {
       adb('shell', 'getprop', 'ro.product.model'),
       adb('shell', 'getprop', 'ro.build.version.security_patch'),
     ].join('\\n'))
-    writeFileSync(join(OUT, `${prefix}webview-provider.txt`), adb('shell', 'cmd', 'webviewupdate', 'get-current-webview-package'))
+    writeFileSync(join(OUT, `${prefix}webview-provider.txt`), adb('shell', 'dumpsys', 'webviewupdate'))
     writeFileSync(join(OUT, `${prefix}webview-package.txt`), adb('shell', 'dumpsys', 'package', 'com.google.android.webview'))
     writeFileSync(join(OUT, `${prefix}accessibility-settings.txt`), [
       adb('shell', 'settings', 'get', 'secure', 'accessibility_enabled'),
