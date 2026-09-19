@@ -106,7 +106,19 @@ async function waitForUi(label, timeout = 15000) {
     } catch {}
     await sleep(250)
   }
-  throw new Error(`Timed out waiting for UI readiness: ${label}. Last UI snapshot: ${last.slice(0, 2500)}`)
+  writeFileSync(join(OUT, 'readiness-last-ui.xml'), last)
+  const allNodes = [...last.matchAll(/<node\\b[^>]*\\/>/g)].map(match => match[0])
+  const webViews = allNodes.filter(raw => /class=\"android\\.webkit\\.WebView\"/.test(raw))
+  const visibleNodes = allNodes.filter(raw => /\\bvisible-to-user=\"true\"/.test(raw))
+  const diagnostics = {
+    label,
+    allSelfClosingNodes: allNodes.length,
+    visibleNodes: visibleNodes.length,
+    webViewNodes: webViews.length,
+    webViewNodes: webViews.slice(0, 20),
+  }
+  writeFileSync(join(OUT, 'readiness-ui-diagnostics.json'), JSON.stringify(diagnostics, null, 2))
+  throw new Error(`Timed out waiting for UI readiness: ${label}. Raw UI XML and diagnostics were saved to the QA artifact. Last UI snapshot: ${last.slice(0, 2500)}`)
 }
 
 async function closeWithBack() {
@@ -140,6 +152,22 @@ async function openQuranReader(prefix = '') {
 }
 
 async function runSuite(prefix = '') {
+  try {
+    writeFileSync(join(OUT, `${prefix}android-build-props.txt`), [
+      adb('shell', 'getprop', 'ro.build.version.sdk'),
+      adb('shell', 'getprop', 'ro.build.version.release'),
+      adb('shell', 'getprop', 'ro.product.model'),
+      adb('shell', 'getprop', 'ro.build.version.security_patch'),
+    ].join('\\n'))
+    writeFileSync(join(OUT, `${prefix}webview-provider.txt`), adb('shell', 'cmd', 'webviewupdate', 'get-current-webview-package'))
+    writeFileSync(join(OUT, `${prefix}webview-package.txt`), adb('shell', 'dumpsys', 'package', 'com.google.android.webview'))
+    writeFileSync(join(OUT, `${prefix}accessibility-settings.txt`), [
+      adb('shell', 'settings', 'get', 'secure', 'accessibility_enabled'),
+      adb('shell', 'settings', 'get', 'secure', 'enabled_accessibility_services'),
+    ].join('\\n'))
+  } catch (error) {
+    writeFileSync(join(OUT, `${prefix}runtime-diagnostics-error.txt`), String(error))
+  }
   await adb('shell', 'am', 'force-stop', 'com.noortools.mobile')
   adb('shell', 'am', 'start', '-W', '-n', 'com.noortools.mobile/.MainActivity')
   const pid = await waitForApp()
