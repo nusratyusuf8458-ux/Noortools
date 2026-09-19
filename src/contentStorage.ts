@@ -24,6 +24,7 @@ function validReminders(value: unknown): ReminderPreferences { const source = is
 function validNotes(value: unknown): Record<string, Note> { if (!isObject(value)) return {}; const result: Record<string, Note> = {}; for (const [id, raw] of Object.entries(value)) { if (!isObject(raw) || raw.id !== id || typeof raw.contentId !== 'string' || !raw.contentId.trim() || typeof raw.text !== 'string' || typeof raw.createdAt !== 'string' || typeof raw.updatedAt !== 'string' || !isNoteType(raw.contentType)) continue; if (!raw.text.trim()) continue; result[id] = { id, contentType: raw.contentType, contentId: raw.contentId, text: raw.text.trim().slice(0, 5000), createdAt: raw.createdAt, updatedAt: raw.updatedAt } } return result }
 function migrate(value: unknown): ContentUserState {
   if (!isObject(value)) throw new Error('Stored content data has an invalid structure.')
+  if (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== undefined) throw new Error('Stored content data uses an unsupported version.')
   const bookmarks: Record<string, Bookmark> = {}
   if (isObject(value.bookmarks)) for (const [id, raw] of Object.entries(value.bookmarks)) { if (!isObject(raw) || !isContentType(raw.type) || typeof raw.addedAt !== 'string') continue; bookmarks[id] = { id, type: raw.type, addedAt: raw.addedAt, favorite: raw.favorite === true } }
   const quranSource = isObject(value.quran) ? value.quran : {}; const positions: QuranReadingProgress['positions'] = {}
