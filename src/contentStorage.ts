@@ -1,4 +1,5 @@
 import type { ContentType } from './content'
+import { preserveCorruptStorage } from './storageRecovery'
 
 export type Bookmark = { id: string; type: ContentType; addedAt: string; favorite: boolean }
 export type QuranReadingHistoryEntry = { id: string; surah: number; ayah: number; at: string }
@@ -22,7 +23,7 @@ function notificationPermission(): ReminderPreferences['permission'] { return ty
 function validReminders(value: unknown): ReminderPreferences { const source = isObject(value) ? value : {}; const rawItems = isObject(source.items) ? source.items : {}; const fallback = cloneEmpty().reminders; const item = (key: ReminderKey) => { const raw = isObject(rawItems[key]) ? rawItems[key] : {}; const base = fallback.items[key]; return { enabled: raw.enabled === true, time: validTime(raw.time, base.time) } }; return { notificationsEnabled: source.notificationsEnabled === true, permission: source.permission === 'granted' || source.permission === 'denied' || source.permission === 'unsupported' ? source.permission : notificationPermission(), items: { prayer: item('prayer'), morningAzkar: item('morningAzkar'), eveningAzkar: item('eveningAzkar'), quranReading: item('quranReading'), tasbih: item('tasbih') } } }
 function validNotes(value: unknown): Record<string, Note> { if (!isObject(value)) return {}; const result: Record<string, Note> = {}; for (const [id, raw] of Object.entries(value)) { if (!isObject(raw) || raw.id !== id || typeof raw.contentId !== 'string' || !raw.contentId.trim() || typeof raw.text !== 'string' || typeof raw.createdAt !== 'string' || typeof raw.updatedAt !== 'string' || !isNoteType(raw.contentType)) continue; if (!raw.text.trim()) continue; result[id] = { id, contentType: raw.contentType, contentId: raw.contentId, text: raw.text.trim().slice(0, 5000), createdAt: raw.createdAt, updatedAt: raw.updatedAt } } return result }
 function migrate(value: unknown): ContentUserState {
-  if (!isObject(value)) return cloneEmpty()
+  if (!isObject(value)) throw new Error('Stored content data has an invalid structure.')
   const bookmarks: Record<string, Bookmark> = {}
   if (isObject(value.bookmarks)) for (const [id, raw] of Object.entries(value.bookmarks)) { if (!isObject(raw) || !isContentType(raw.type) || typeof raw.addedAt !== 'string') continue; bookmarks[id] = { id, type: raw.type, addedAt: raw.addedAt, favorite: raw.favorite === true } }
   const quranSource = isObject(value.quran) ? value.quran : {}; const positions: QuranReadingProgress['positions'] = {}
@@ -34,9 +35,20 @@ function migrate(value: unknown): ContentUserState {
   const azkarDaily: Record<string, AzkarDay> = {}; if (isObject(value.azkarDaily)) for (const [date, rawDay] of Object.entries(value.azkarDaily)) if (/^\d{4}-\d{2}-\d{2}$/.test(date) && isObject(rawDay)) { const day: AzkarDay = {}; for (const [id, count] of Object.entries(rawDay)) if (Number.isInteger(count) && Number(count) > 0) day[id] = Number(count); if (Object.keys(day).length) azkarDaily[date] = day }
   return { version: 3, bookmarks, quran: { lastReadId: typeof quranSource.lastReadId === 'string' ? quranSource.lastReadId : null, positions, readAyahs, history, activityDates }, itemProgress, azkarDaily, notes: validNotes(value.notes), reminders: validReminders(value.reminders) }
 }
-export function loadContentState(): ContentUserState { try { const current = localStorage.getItem(KEY); if (current) return migrate(JSON.parse(current)); for (const key of LEGACY_KEYS) { const legacy = localStorage.getItem(key); if (legacy) return migrate(JSON.parse(legacy)) } } catch { return cloneEmpty() } return cloneEmpty() }
+export function loadContentState(): ContentUserState {
+  for (const key of [KEY, ...LEGACY_KEYS]) {
+    let raw: string | null = null
+    try { raw = localStorage.getItem(key) } catch { continue }
+    if (!raw) continue
+    try { return migrate(JSON.parse(raw)) }
+    catch (error) {
+      preserveCorruptStorage(key, raw, error instanceof Error ? error.message : 'Stored content data could not be migrated safely.')
+    }
+  }
+  return cloneEmpty()
+}
 export function saveContentState(state: ContentUserState): void { localStorage.setItem(KEY, JSON.stringify({ ...state, version: 3 })) }
-export function resetContentState(): ContentUserState { localStorage.removeItem(KEY); for (const key of LEGACY_KEYS) localStorage.removeItem(key); return cloneEmpty() }
+export function resetContentState(): ContentUserState { localStorage.removeItem(KEY); for (const key of LEGACY_KEYS) localStorage.removeItem(key); for (const key of [KEY, ...LEGACY_KEYS]) localStorage.removeItem(`${key}:recovery:v1`); return cloneEmpty() }
 export function toggleBookmark(state: ContentUserState, id: string, type: ContentType, now = new Date()): ContentUserState { if (!id.trim()) return state; const next = structuredClone(state); if (next.bookmarks[id]) delete next.bookmarks[id]; else next.bookmarks[id] = { id, type, addedAt: now.toISOString(), favorite: false }; return next }
 export function toggleFavorite(state: ContentUserState, id: string, type?: ContentType, now = new Date()): ContentUserState { const next = structuredClone(state); if (!next.bookmarks[id]) { if (!type || !id.trim()) return state; next.bookmarks[id] = { id, type, addedAt: now.toISOString(), favorite: true } } else next.bookmarks[id].favorite = !next.bookmarks[id].favorite; return next }
 export function recordQuranProgress(state: ContentUserState, surah: number, ayah: number, now = new Date(), dateKey = localDateKey(now)): ContentUserState { if (!Number.isInteger(surah) || surah < 1 || surah > 114 || !Number.isInteger(ayah) || ayah < 1) return state; const next = structuredClone(state); const id = `quran:${surah}:${ayah}`; const surahId = `quran:${surah}`; const at = now.toISOString(); next.quran.lastReadId = id; next.quran.positions[surahId] = { ayah, updatedAt: at }; next.quran.readAyahs[id] = at; next.quran.history = [...next.quran.history, { id, surah, ayah, at }].slice(-100); next.quran.activityDates[dateKey] = (next.quran.activityDates[dateKey] ?? 0) + 1; return next }
