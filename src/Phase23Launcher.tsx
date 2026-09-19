@@ -30,7 +30,7 @@ export default function Phase23Launcher() {
   const surahs = useMemo(() => Array.from(new Set(translations.map(item => item.surah))), [translations])
 
   return <>
-    <button className="phase23-launcher" onClick={() => setOpen(true)} aria-label="Open Phase 2.3 verified content">2.3 <span>Hadith · Translation · Audio</span></button>
+    <button className="phase23-launcher" onClick={() => setOpen(true)} aria-label="Open Quran translations, Hadith and audio">2.3 <span>Hadith · Translation · Audio</span></button>
     {open && <div className="phase2-overlay" role="dialog" aria-modal="true" aria-label="Phase 2.3 verified source library">
       <section className="page content-page">
         <div className="back"><button onClick={() => setOpen(false)} aria-label="Close Phase 2.3">←</button><h1>Phase 2.3</h1></div>
