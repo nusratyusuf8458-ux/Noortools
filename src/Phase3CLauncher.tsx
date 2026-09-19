@@ -23,7 +23,7 @@ export default function Phase3CLauncher(){
  const done=useMemo(()=>state.hajj.completedStepIds.length+state.umrah.completedStepIds.length,[state])
  const add=()=>{try{setState(s=>addChecklist(s,checkLabel));setCheckLabel('');setNotice('Personal checklist item saved locally.')}catch(e){setNotice(e instanceof Error?e.message:'Could not add checklist item.')}}
  return <>
-  <button className="phase3c-launcher" onClick={()=>setOpen(true)} aria-label="Open Hajj and Umrah">Hajj · Umrah</button></button>
+  <button className="phase3c-launcher" onClick={()=>setOpen(true)} aria-label="Open Hajj and Umrah">Hajj · Umrah</button>
   {open&&<div className="phase3c-overlay" role="dialog" aria-modal="true" aria-label="Hajj and Umrah companion"><section className="page phase3c-page">
    <div className="back"><button onClick={()=>setOpen(false)} aria-label="Close Hajj and Umrah">←</button><div><h1>Hajj · Umrah Foundation</h1></div></div>
    <div className="content-tabs" role="tablist" aria-label="Hajj and Umrah sections">{(['hajj','umrah','checklist'] as Section[]).map(x=><button key={x} role="tab" aria-selected={section===x} className={section===x?'selected':''} onClick={()=>setSection(x)}>{x==='hajj'?'Hajj':x==='umrah'?'Umrah':'My Checklist'}</button>)}</div>
