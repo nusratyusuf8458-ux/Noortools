@@ -56,7 +56,7 @@ jobs:
 
   android-emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -105,17 +105,69 @@ jobs:
             test -r /dev/kvm
             test -w /dev/kvm
           script: |
-            set -eu
+            set +e
             mkdir -p /tmp/noortools-ui-qa
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            timeout 600s node scripts/android-ui-smoke.mjs
-      - name: Capture final Android logs
+            timeout --signal=TERM --kill-after=10s 600s node scripts/android-ui-smoke.mjs
+            qa_status=$?
+            if [ "$qa_status" -ne 0 ]; then
+              echo "UI QA exited with status $qa_status; capturing logcat before emulator-runner teardown."
+              if ! timeout --signal=TERM --kill-after=5s 15s adb -s emulator-5554 logcat -d -t 1200 > /tmp/noortools-ui-qa/pre-teardown-logcat.txt 2>&1; then
+                echo "PRE-TEARDOWN LOGCAT UNAVAILABLE: adb logcat did not complete within 15s." | tee /tmp/noortools-ui-qa/pre-teardown-logcat-diagnostic.txt
+              fi
+            fi
+            exit "$qa_status"
+      - name: Capture final Android logs and cleanup
         if: ${{ always() }}
+        timeout-minutes: 2
+        shell: bash
         run: |
-          mkdir -p /tmp/noortools-ui-qa
-          adb -s emulator-5554 logcat -d -t 1200 > /tmp/noortools-ui-qa/runner-logcat.txt 2>&1 || true
+          set +e
+          OUT=/tmp/noortools-ui-qa
+          mkdir -p "$OUT"
+
+          cleanup() {
+            echo "Starting bounded Android cleanup..."
+            if timeout --signal=TERM --kill-after=5s 10s adb -s emulator-5554 shell am force-stop com.noortools.mobile > "$OUT/cleanup-force-stop.txt" 2>&1; then
+              echo "Android app force-stop completed."
+            else
+              echo "ANDROID APP FORCE-STOP UNAVAILABLE: adb shell am force-stop did not complete within 10s." >> "$OUT/cleanup-diagnostic.txt"
+            fi
+            if timeout --signal=TERM --kill-after=5s 10s adb -s emulator-5554 emu kill > "$OUT/cleanup-emulator-kill.txt" 2>&1; then
+              echo "Emulator shutdown command completed."
+            else
+              echo "EMULATOR SHUTDOWN UNAVAILABLE: adb emu kill did not complete within 10s." >> "$OUT/cleanup-diagnostic.txt"
+            fi
+            if timeout --signal=TERM --kill-after=5s 10s adb kill-server > "$OUT/cleanup-adb-kill-server.txt" 2>&1; then
+              echo "ADB server shutdown command completed."
+            else
+              echo "ADB SERVER SHUTDOWN UNAVAILABLE: adb kill-server did not complete within 10s." >> "$OUT/cleanup-diagnostic.txt"
+            fi
+            pkill -TERM -x emulator 2>/dev/null || true
+            pkill -TERM -x qemu-system-x86_64 2>/dev/null || true
+            pkill -TERM -x adb 2>/dev/null || true
+            pkill -TERM -f 'scripts/android-ui-smoke\.mjs' 2>/dev/null || true
+            sleep 2
+            pkill -KILL -x emulator 2>/dev/null || true
+            pkill -KILL -x qemu-system-x86_64 2>/dev/null || true
+            pkill -KILL -x adb 2>/dev/null || true
+            pkill -KILL -f 'scripts/android-ui-smoke\.mjs' 2>/dev/null || true
+            echo "Bounded Android cleanup finished."
+          }
+          trap cleanup EXIT
+          echo "Attempting bounded final log capture..."
+          if timeout --signal=TERM --kill-after=5s 15s adb -s emulator-5554 get-state > "$OUT/final-adb-state.txt" 2>&1; then
+            if timeout --signal=TERM --kill-after=5s 20s adb -s emulator-5554 logcat -d -t 1200 > "$OUT/runner-logcat.txt" 2>&1; then
+              echo "Final Android logcat capture succeeded." | tee "$OUT/final-logcat-diagnostic.txt"
+            else
+              echo "FINAL LOGCAT UNAVAILABLE: adb logcat did not complete within 20s; cleanup will continue." | tee "$OUT/final-logcat-diagnostic.txt"
+            fi
+          else
+            echo "FINAL LOGCAT UNAVAILABLE: emulator/ADB state could not be queried within 15s; cleanup will continue." | tee "$OUT/final-logcat-diagnostic.txt"
+          fi
       - name: Upload Android UI QA evidence
         if: ${{ always() }}
+        timeout-minutes: 2
         uses: actions/upload-artifact@v4
         with:
           name: noortools-android-ui-qa-${{ github.sha }}
