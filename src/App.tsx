@@ -109,7 +109,7 @@ export default function App() {
   const updatePrayerSettings = (patch: Partial<AppState['prayerSettings']>) => setState(s => ({ ...s, prayerSettings: { ...s.prayerSettings, ...patch } }))
 
   return <div className="app">
-    {offline && <div className="offline-banner" role="status">Offline mode: local Phase-1 features continue to work.</div>}
+    {offline && <div className="offline-banner" role="status">Offline mode: saved local features continue to work.</div>}
     <header className="topbar"><button className="brand" onClick={() => navigate('home')} aria-label="NoorTools home"><span className="mark">ن</span><span><b>NoorTools</b><small>Islamic companion</small></span></button><button onClick={() => navigate('settings')} aria-label="Settings">⚙</button></header>
     <main>
       {view === 'home' && <section className="page"><div className="hero"><div><p className="eyebrow">{dateLabel(now, tz ?? undefined)}</p><h1>Assalamu Alaikum</h1><p className="muted">A calm place for your daily worship.</p></div><div className="arabic">نور</div></div>
