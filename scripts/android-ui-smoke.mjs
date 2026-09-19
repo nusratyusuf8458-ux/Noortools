@@ -22,14 +22,16 @@ function dumpUi() {
 
 function nodes(xml) {
   return [...xml.matchAll(/<node\b[^>]*\/>/g)].filter(match => {
-    const visibility = match[0].match(/\bvisible-to-user="(true|false)"/)?.[1]
-    return visibility !== 'false'
+    const raw = match[0]
+    const visibility = raw.match(/\bvisible-to-user="(true|false)"/)?.[1]
+    if (visibility === 'false') return false
+    const b = raw.match(/\bbounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/)
+    return Boolean(b) && +b[3] > +b[1] && +b[4] > +b[2]
   }).map(match => {
     const raw = match[0]
     const text = raw.match(/\btext="([^"]*)"/)?.[1] || ''
     const desc = raw.match(/\bcontent-desc="([^"]*)"/)?.[1] || ''
     const b = raw.match(/\bbounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/)
-    if (!b) return { raw, text, desc, x: 0, y: 0 }
     return { raw, text, desc, x: Math.round((+b[1] + +b[3]) / 2), y: Math.round((+b[2] + +b[4]) / 2) }
   })
 }
