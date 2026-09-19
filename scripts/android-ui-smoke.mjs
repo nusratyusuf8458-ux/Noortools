@@ -10,7 +10,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 function displaySize() {
   const raw = adb('shell', 'wm', 'size')
-  const match = raw.match(/Physical size:\s*(\d+)x(\d+)/) || raw.match(/Override size:\s*(\d+)x(\d+)/)
+  const match = raw.match(/Override size:\s*(\d+)x(\d+)/) || raw.match(/Physical size:\s*(\d+)x(\d+)/)
   if (!match) throw new Error(`Could not determine emulator display size from: ${raw}`)
   return { width: Number(match[1]), height: Number(match[2]) }
 }
@@ -21,7 +21,7 @@ function dumpUi() {
 }
 
 function nodes(xml) {
-  return [...xml.matchAll(/<node\b[^>]*\/>/g)].map(match => {
+  return [...xml.matchAll(/<node\b[^>]*\/>/g)].filter(match => /\bvisible-to-user="true"/.test(match[0])).map(match => {
     const raw = match[0]
     const text = raw.match(/\btext="([^"]*)"/)?.[1] || ''
     const desc = raw.match(/\bcontent-desc="([^"]*)"/)?.[1] || ''
@@ -75,10 +75,12 @@ async function checkScreen(name, expected, banned = []) {
   await sleep(500)
   const afterUp = dumpUi()
   assertContains(afterUp, expected, `${name} after scroll up`)
+  assertNoCrossSurface(afterUp, `${name} after scroll up`, banned)
   adb('shell', 'input', 'swipe', String(x), String(bottom), String(x), String(top), '350')
   await sleep(500)
   const afterDown = dumpUi()
   assertContains(afterDown, expected, `${name} after scroll down`)
+  assertNoCrossSurface(afterDown, `${name} after scroll down`, banned)
 }
 
 async function waitForApp(timeout = 20000) {
