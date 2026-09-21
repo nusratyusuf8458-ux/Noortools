@@ -68,7 +68,7 @@ function capture(name) {
   execFileSync('bash', ['-lc', `adb -s emulator-5554 exec-out screencap -p > "$1"`, '--', join(OUT, `${name}.png`)], { stdio: 'inherit' })
 }
 
-async function checkScreen(name, expected, banned = []) {
+async function checkScreen(name, expected, banned = [], scrollExpected = expected) {
   const xml = dumpUi()
   writeFileSync(join(OUT, `${name}-precheck.xml`), xml)
   assertContains(xml, expected, name)
@@ -82,12 +82,14 @@ async function checkScreen(name, expected, banned = []) {
   adb('shell', 'input', 'swipe', String(x), String(top), String(x), String(bottom), '350')
   await sleep(500)
   const afterUp = dumpUi()
-  assertContains(afterUp, expected, `${name} after scroll up`)
+  writeFileSync(join(OUT, `${name}-after-scroll-up.xml`), afterUp)
+  assertContains(afterUp, scrollExpected, `${name} after scroll up`)
   assertNoCrossSurface(afterUp, `${name} after scroll up`, banned)
   adb('shell', 'input', 'swipe', String(x), String(bottom), String(x), String(top), '350')
   await sleep(500)
   const afterDown = dumpUi()
-  assertContains(afterDown, expected, `${name} after scroll down`)
+  writeFileSync(join(OUT, `${name}-after-scroll-down.xml`), afterDown)
+  assertContains(afterDown, scrollExpected, `${name} after scroll down`)
   assertNoCrossSurface(afterDown, `${name} after scroll down`, banned)
 }
 
@@ -141,7 +143,7 @@ async function openMore(item) {
 
 async function openQuranReader(prefix = '') {
   await tap('Quran')
-  await checkScreen(`${prefix}02-quran`, 'Noor Library', ['Verified content search', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await checkScreen(`${prefix}02-quran`, 'Noor Library', ['Verified content search', 'Zakat · Ramadan · Fasting', 'Prayer times'], 'Noor Library sections')
   await tap('Quran Reader', { maxY: 1000 })
   await waitForUi('Surah browser')
   let xml = dumpUi()
@@ -171,7 +173,7 @@ async function openQuranReader(prefix = '') {
   if (!surah) throw new Error('Quran Reader: Al-Fatihah entry was not exposed to Android UIAutomator')
   adb('shell', 'input', 'tap', String(surah.x), String(surah.y))
   await sleep(1000)
-  await checkScreen(`${prefix}03-quran-reader`, 'Al-Faatiha', ['Noor Library', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
+  await checkScreen(`${prefix}03-quran-reader`, 'Al-Faatiha', ['Read with focus. Keep your data yours.', 'Search verified content', 'Zakat · Ramadan · Fasting', 'Prayer times'])
 }
 
 async function runSuite(prefix = '') {
