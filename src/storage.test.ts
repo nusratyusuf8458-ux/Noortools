@@ -31,6 +31,16 @@ describe('local storage', () => {
     expect(recovered.tasbih.total).toBe(0)
   })
 
+  it('preserves malformed storage before returning an empty state', () => {
+    const raw = '{"version":99,"tasbih":{"total":42}}'
+    localStorage.setItem('noortools:v3', raw)
+    expect(loadState().tasbih.total).toBe(0)
+    const recovery = JSON.parse(localStorage.getItem('noortools:v3:recovery:v1') ?? '{}')
+    expect(recovery.schema).toBe('noortools.storage-recovery')
+    expect(recovery.sourceKey).toBe('noortools:v3')
+    expect(recovery.raw).toBe(raw)
+  })
+
   it('migrates v1 and v2 into v3 without inventing session history', () => {
     localStorage.setItem('noortools:v1', JSON.stringify({ version: 1, location: null, salah: {}, tasbih: { count: 2, target: 33, dhikr: 'SubhanAllah', sessions: 3, total: 9 } }))
     const migratedV1 = loadState()

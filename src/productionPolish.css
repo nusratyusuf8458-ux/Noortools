@@ -1,11 +1,13 @@
-/* Shared production UI layer: layout integration only; feature behavior remains unchanged. */
+/* Shared production UI layer: one scroll owner per screen, safe-area aware mobile chrome, and isolated feature overlays. */
 :root { --noor-header-base: 72px; --noor-bottom-base: 72px; --noor-page-gutter: 20px; }
 html, body, #root { min-height: 100%; }
 html, body { overflow-x: hidden; }
+body { min-width: 320px; }
+#root { width: 100%; }
 .app { width: 100%; min-height: 100dvh; padding-bottom: calc(var(--noor-bottom-base) + env(safe-area-inset-bottom)); }
 main { width: 100%; min-width: 0; overflow-x: clip; }
 .topbar { min-height: var(--noor-header-base); height: auto; padding-top: env(safe-area-inset-top); padding-bottom: 0; padding-left: max(var(--noor-page-gutter), env(safe-area-inset-left)); padding-right: max(var(--noor-page-gutter), env(safe-area-inset-right)); }
-.page { width: min(100%, 1180px); min-width: 0; padding-inline: max(var(--noor-page-gutter), env(safe-area-inset-left)); padding-right: max(var(--noor-page-gutter), env(safe-area-inset-right)); padding-bottom: 34px; }
+.page { width: min(100%, 1180px); min-width: 0; margin-inline: auto; padding-inline: max(var(--noor-page-gutter), env(safe-area-inset-left)); padding-right: max(var(--noor-page-gutter), env(safe-area-inset-right)); padding-bottom: 34px; }
 .page > * { min-width: 0; }
 .hero { gap: 18px; min-width: 0; }
 .hero > div:first-child { min-width: 0; }
@@ -16,29 +18,54 @@ main { width: 100%; min-width: 0; overflow-x: clip; }
 button, input, select, textarea { max-width: 100%; }
 button { touch-action: manipulation; }
 
+/* Product navigation is the only persistent bottom chrome. */
 .app > .bottom-nav { display: none !important; }
-.product-nav { left: 0; right: 0; bottom: 0; height: calc(var(--noor-bottom-base) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right)); gap: 0; justify-content: stretch; }
+.product-nav { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--noor-bottom-base) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right)); gap: 0; justify-content: stretch; z-index: 100; }
 .product-nav button { flex: 1 1 0; width: 0; min-width: 0; min-height: 64px; padding: 7px 4px 5px; }
 .product-nav button span { line-height: 1; }
 .product-nav button[aria-current="page"] { color: #173c3a; font-weight: 800; }
 .product-nav button:focus-visible { outline: 3px solid color-mix(in srgb, #b38a45 65%, transparent); outline-offset: -4px; }
-.product-more-panel { inset: 0 0 calc(var(--noor-bottom-base) + env(safe-area-inset-bottom)); padding: 12px max(12px, env(safe-area-inset-left)) 12px max(12px, env(safe-area-inset-right)); align-items: end; }
+.product-more-panel { position: fixed; inset: 0 0 calc(var(--noor-bottom-base) + env(safe-area-inset-bottom)); padding: 12px max(12px, env(safe-area-inset-left)) 12px max(12px, env(safe-area-inset-right)); align-items: end; z-index: 110; }
 .product-more-menu { max-height: min(78dvh, 640px); overflow: auto; overscroll-behavior: contain; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 
+/* Every feature is a full-screen route surface. It is intentionally opaque so a prior route can never show through. */
+.phase2-overlay, .phase23-overlay, .phase3-overlay, .phase3b-overlay, .phase3c-overlay, .phase3e-overlay, .mosque-overlay, .search-experience {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  isolation: isolate;
+  background: var(--bg, #f6f7f3) !important;
+  z-index: 200;
+}
+.phase2-overlay .content-page, .phase23-overlay .content-page, .phase3-overlay .page, .phase3b-overlay .page, .phase3c-overlay .page, .phase3e-overlay .page { min-height: 100%; box-sizing: border-box; }
+.search-experience { padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+.search-experience-panel { min-height: 100%; }
+
+/* Sticky controls remain inside their own route scroll context. */
 .content-tabs { top: calc(var(--noor-header-base) + env(safe-area-inset-top) + 1px); z-index: 6; }
 .reader-toolbar { top: calc(var(--noor-header-base) + env(safe-area-inset-top) + 58px); z-index: 5; }
 .experience-toast { top: calc(env(safe-area-inset-top) + 8px); }
 
-.phase2-overlay, .phase23-overlay, .phase3-overlay, .phase3b-overlay, .phase3c-overlay, .phase3e-overlay { position: fixed; inset: 0; z-index: 70; width: 100%; min-height: 100dvh; overflow: auto; overscroll-behavior: contain; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
-.phase2-overlay .content-page, .phase23-overlay .content-page, .phase3-overlay .page, .phase3b-overlay .page, .phase3c-overlay .page { min-height: calc(100dvh - env(safe-area-inset-top)); }
-
-/* Internal/provider details are retained in implementation/data but removed from normal product chrome. */
+/* Provider/review implementation details stay in data, never in product chrome. */
 .phase3-page .footnote, .phase3b-page .footnote, .phase3c-page .footnote, .phase3c-page .p3c-warning, .phase3c-page .p3c-source, .phase3c-page .p3c-honesty, .phase3e-panel .footnote, .phase3e-panel .phase3e-meta, .status-pill { display: none !important; }
+.app > main > .page .footnote { display: none !important; }
+.phase3-page .back .eyebrow, .phase3b-page .back .eyebrow, .phase3c-page .back .eyebrow, .phase3e-panel > header .eyebrow, .content-page .back .eyebrow { display: none !important; }
 .phase3d-launcher { display: none !important; }
+.phase2-launcher, .phase23-launcher, .phase3-launcher, .phase3b-launcher, .phase3c-launcher, .phase3e-launcher, .global-search-launcher, .mosque-launcher { display: none !important; }
 .app > main > .page > .empty-panel:not([role="alert"]) { display: none; }
 .origin-chip { font-size: 0; }
 .origin-chip::before { content: "Location selected"; font-size: 12px; }
 .origin-chip button { font-size: 12px; }
+.offline-banner { font-size: 0; }
+.offline-banner::before { content: "Offline mode: saved local features continue to work."; font-size: 12px; }
+.search-experience .source-line, .search-experience .search-results .card-head > .muted { display: none !important; }
+.search-experience .search-result-card:has(.status-pill) { display: none !important; }
 
 @media (max-width: 760px) {
   :root { --noor-page-gutter: 14px; }
